@@ -18,12 +18,16 @@ app.get("/", (req, res) => {
     res.render("index.ejs");
 });
 
+app.get("/browse", (req, res) => {
+    res.render("browse.ejs");
+});
+
 app.get("/about", (req, res) => {
     res.render("about.ejs");
 });
 
-app.get("/contact", (req, res) => {
-    res.render("contact.ejs");
+app.get("/profile", (req, res) => {
+    res.render("user-profile.ejs");
 });
 
 app.listen(PORT, () => {

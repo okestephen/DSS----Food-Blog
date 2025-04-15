@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "CMP-6045B UG23 Developping Secure Software 002",
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "serve": "node index.js",
@@ -15,6 +16,7 @@
     "ejs": "^3.1.10",
     "express": "^5.1.0",
     "expressjs": "^1.0.1",
+    "morgan": "^1.10.0",
     "nodemon": "^3.1.9"
   }
 }

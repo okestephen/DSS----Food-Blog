@@ -14,21 +14,26 @@ const PORT = 3000;
 app.use(bodyParser.urlencoded({ extended: true}));
 app.use(express.static("public"))
 
+
+// Routes
+
 app.get("/", (req, res) => {
-    res.render("index.ejs");
+    res.render("index.ejs", 
+    //     {
+    //         featured_title: "Creme Brulee",
+    //         featured_desc: "This is a creme brulee",
+    //         featured_image: "<style> .hero-section { background-image: url(\"creme-brulee.png\");}</style>"
+    //     }
+    );
 });
 
-app.get("/browse", (req, res) => {
-    res.render("browse.ejs");
+app.get("/new-recipe", (req, res) => {
+    res.render("new-recipe.ejs");
 });
 
-app.get("/about", (req, res) => {
-    res.render("about.ejs");
-});
-
-app.get("/profile", (req, res) => {
-    res.render("user-profile.ejs");
-});
+app.post("/submit-recipe", (req, res) => {
+    console.log(res.body)
+})
 
 app.listen(PORT, () => {
     console.log(`Listening on port ${PORT}`);

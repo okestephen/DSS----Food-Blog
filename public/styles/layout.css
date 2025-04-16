@@ -124,6 +124,7 @@ li.dropdown {
 footer {
     position: relative;
     width: 100%;
+    bottom: 0;
     background-color: rgb(var(--madder));
     min-height: 100px;
     padding: 10px 50px;

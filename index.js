@@ -34,8 +34,8 @@ app.get("/login", (req, res) => {
     res.render("login.ejs");
 });
 
-app.get("/new-recipe", (req, res) => {
-    res.render("new-recipe.ejs");
+app.get("/submit", (req, res) => {
+    res.render("submit.ejs");
 });
 
 app.post("/submit-recipe", (req, res) => {
@@ -44,10 +44,6 @@ app.post("/submit-recipe", (req, res) => {
 
 app.get("/browse", (req, res) => {
     res.render("browse.ejs");
-});
-
-app.get("/submit", (req, res) => {
-    res.render("submit.ejs");
 });
 
 app.get("/profile", (req, res) => {

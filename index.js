@@ -3,20 +3,10 @@ import express from "express";
 import { dirname } from "path";
 import { fileURLToPath } from "url";
 import bodyParser from "body-parser";
+import pg from "pg";
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
-// Set up database Connection
-// import Client from "pg";
 
-// const db = new Client({
-//     user: "postgres",
-//     host: "localhost",
-//     database: "UG23 Food Blog",
-//     password: "LIB01.40",
-//     port: 5432,
-// });
-
-// db.connect();
 
 
 // Create environement and set Port
@@ -40,6 +30,10 @@ app.get("/", (req, res) => {
     );
 });
 
+app.get("/login", (req, res) => {
+    res.render("login.ejs");
+});
+
 app.get("/new-recipe", (req, res) => {
     res.render("new-recipe.ejs");
 });
@@ -47,6 +41,23 @@ app.get("/new-recipe", (req, res) => {
 app.post("/submit-recipe", (req, res) => {
     console.log(res.body)
 })
+
+app.get("/browse", (req, res) => {
+    res.render("browse.ejs");
+});
+
+app.get("/submit", (req, res) => {
+    res.render("submit.ejs");
+});
+
+app.get("/profile", (req, res) => {
+    res.render("user-profile.ejs");
+});
+
+app.get("/about", (req, res) => {
+    res.render("about.ejs");
+});
+
 
 app.listen(PORT, () => {
     console.log(`Listening on port ${PORT}`);

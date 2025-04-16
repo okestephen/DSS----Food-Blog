@@ -5,6 +5,19 @@ import { fileURLToPath } from "url";
 import bodyParser from "body-parser";
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
+// Set up database Connection
+// import Client from "pg";
+
+// const db = new Client({
+//     user: "postgres",
+//     host: "localhost",
+//     database: "UG23 Food Blog",
+//     password: "LIB01.40",
+//     port: 5432,
+// });
+
+// db.connect();
+
 
 // Create environement and set Port
 const app = express();

@@ -3,10 +3,38 @@ import express from "express";
 import { dirname } from "path";
 import { fileURLToPath } from "url";
 import bodyParser from "body-parser";
+import "dotenv/config";
+// console.log("PROCESS.ENV LOG: ", process.env);
 import pg from "pg";
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
+// Database environement 
+const db = new pg.Client({
+    user: "postgres",
+    host: "localhost",
+    database: "UG23 Food Blog",
+    password: process.env.DATABASE_PASSWORD,
+    port: 5432,
 
+})
+
+db.connect((err, res) => {
+    if (err) {
+        console.err("Error connecting to the database", err)
+    } else {
+        console.log("Database connection is successful")
+    }
+    
+});
+
+db.query("SELECT * FROM users", (err, res) => {
+    if (err) {
+        console.error("Error executing query", err.stack);
+    } else {
+        let data = res.body;
+    }
+    db.end();
+})
 
 
 // Create environement and set Port

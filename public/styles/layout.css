@@ -8,8 +8,8 @@ Black
 @import url('https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap');
 
 :root{
-    --peachyellow: 250, 219, 158;
-    --madder: 157, 6, 44;
+    --primary: 157, 6, 44;
+    --secondary: 250, 219, 158;
 }
 
 * {
@@ -26,7 +26,7 @@ header {
     justify-content: flex-end;
     align-items: center;
     padding: 10px 5%;
-    background-color: rgb(var(--madder));
+    background-color: rgb(var(--primary));
 }
 
 header li, header a, header button {
@@ -58,13 +58,13 @@ header li, header a, header button {
 }
 
 .nav__links li a:hover {
-    color: rgb(var(--peachyellow));
+    color: rgb(var(--secondary));
     font-weight: bolder;
 }
 
 header button {
     padding: 9px 25px;
-    background-color: rgb(var(--peachyellow));
+    background-color: rgb(var(--secondary));
     border: none;
     border-radius: 50px;
     cursor: pointer;
@@ -74,7 +74,7 @@ header button {
 }
 
 header button:hover {
-    background-color: rgba(var(--peachyellow), 0.8);
+    background-color: rgba(var(--secondary), 0.8);
 }
 
 li.dropdown {
@@ -107,7 +107,7 @@ li.dropdown {
     text-align: left;
   }
   
-  .dropdown-content a:hover {background-color: rgb(var(--madder));}
+  .dropdown-content a:hover {background-color: rgb(var(--primary));}
   
   .dropdown:hover .dropdown-content {
     display: block;
@@ -115,17 +115,29 @@ li.dropdown {
 
 .active {
     font-weight: bold;
-    color: rgb(var(--peachyellow));
+    color: rgb(var(--secondary));
 }
 
 /* End Header */
+
+/* Main */
+.container {
+    display: grid;
+    grid-template-columns: 1fr 3fr 1fr;
+    /* grid-template-rows: 1fr; */
+    gap: 10px;
+    padding: 10px;
+    background-color: #f9f9f9;
+    min-height: 50v;
+}
+/* End Main */
 
 /* Footer */
 footer {
     position: relative;
     width: 100%;
     bottom: 0;
-    background-color: rgb(var(--madder));
+    background-color: rgb(var(--primary));
     min-height: 100px;
     padding: 10px 50px;
     display: flex;
@@ -171,7 +183,7 @@ footer .social_icon li a {
   }
   footer .menu li a:hover {
     opacity: 1;
-    color: rgb(var(--peachyellow));
+    color: rgb(var(--secondary));
     font-weight: bolder;
   }
   footer p {
@@ -187,6 +199,6 @@ footer .social_icon li a {
   }
 
 ion-icon {
-    color: rgb(var(--peachyellow))
+    color: rgb(var(--secondary))
 }
 /* End Footer */

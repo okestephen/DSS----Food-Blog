@@ -1,0 +1,69 @@
+<%- include("partials/header.ejs") %>
+<div class="left"></div>
+<div class="auth-content">
+    <form class="auth-form" action="/signup" method="POST">
+        <h2>Sign Up</h2>
+
+        <!-- <div class="msg">
+            <li>Username required</li>
+        </div> -->
+
+        <!-- First Name -->
+        <div class="auth-items">
+            <label for="fname">
+                First Name
+            </label>
+            <input type="text" name="fname" id="fname" placeholder="Enter First Name" required>
+        </div>
+            
+            
+        <!-- Last Name -->
+        <div class="auth-items">
+            <label for="lname">
+                Last Name
+            </label>
+            <input type="text" name="lname" id="lname" placeholder="Enter Last Name" required>
+        </div>
+        
+        <!-- Email Address -->
+        <div class="auth-items">
+            <label for="email">
+                Email Address
+            </label>
+            <input type="email" name="email" id="email" placeholder="Enter Email Address" required>
+        </div>
+
+        <!-- Password -->
+        <div class="auth-items">
+            <label for="password">
+                Password
+            </label>
+            <input type="password" name="password" id="password" placeholder="Password" required>
+        </div>
+        
+        <!-- Password Confirmation -->
+        <div class="auth-items">
+            <label for="passwordConf">
+                Confirm Password
+            </label>
+            <input type="password" name="passwordConf" id="passwordConf" placeholder="Password" required>
+        </div>
+
+        <!-- Phone Number -->
+        <div class="auth-items">
+            <label for="phone">
+                Phone Number
+            </label>
+            <input type="tel" name="phone" id="phone" placeholder="Enter Phone Number">
+        </div>
+
+        <!-- Submit Button -->
+        <div class="auth-items">
+            <button type="submit" name="register-btn" class="btn btn-big">Sign Up</button>
+        </div>
+
+        <p><a class="register" href="/login">Already have an account? Login</a></p>
+    </form>
+</div>
+<div class="right"></div>
+<%- include("partials/footer.ejs") %>

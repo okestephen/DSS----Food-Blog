@@ -1,2 +1,32 @@
 <%- include("partials/header.ejs") %>
+<div class="left"></div>
+<div class="auth-content">
+    <form class="auth-form" action="/login" method="POST">
+        <h2>Login</h2>
+
+        <!-- First Name -->
+        <div class="auth-items">
+            <label for="username">
+                Username
+            </label>
+            <input type="text" name="username" id="username" placeholder="Username" required>
+        </div>
+
+        <!-- Password -->
+        <div class="auth-items">
+            <label for="password">
+                Password
+            </label>
+            <input type="password" name="password" id="password" placeholder="Password" required>
+        </div>
+
+        <!-- Submit Button -->
+        <div class="auth-items">
+            <button type="submit" name="register-btn" class="btn btn-big">Log In</button>
+        </div>
+
+        <p><a class="register" href="/signup">Don't Have an account? Login</a></p>
+    </form>
+</div>
+<div class="right"></div>
 <%- include("partials/footer.ejs") %>

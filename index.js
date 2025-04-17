@@ -62,8 +62,30 @@ app.get("/login", (req, res) => {
     res.render("login.ejs");
 });
 
+app.post("/login", (req, res) => {
+   const email = req.body.email;
+   const password = req.body.password; 
+   db.query(`SELECT * FROM users WHERE email = ${email} AND password `)
+});
+
 app.get("/signup", (req, res) => {
     res.render("signup.ejs")
+});
+
+app.post("/signup", (req, res) => {
+    const credentials = req.body;
+    console.log(credendtials)
+    // if (req.body.passwordConf == req.body.password) {
+    //     console.log("Sign up successful");
+    //     res.render("index.ejs")
+    // } else {
+    //     console.log("signup unsuccessful")
+    //     res.render("signup.ejs", 
+    //         {
+    //             passwordConf: "Password do not match"
+    //         }
+    //     )
+    // }
 })
 
 app.get("/submit", (req, res) => {

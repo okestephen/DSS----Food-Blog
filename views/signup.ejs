@@ -4,9 +4,11 @@
     <form class="auth-form" action="/signup" method="POST">
         <h2>Sign Up</h2>
 
-        <!-- <div class="msg">
-            <li>Username required</li>
-        </div> -->
+        <% if(locals.passwordConf) { %>
+            <div class="msg error">
+                 <li><%=passwordConf%> </li>
+            </div>
+        <% } %>
 
         <!-- First Name -->
         <div class="auth-items">

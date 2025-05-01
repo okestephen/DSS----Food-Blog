@@ -2,6 +2,7 @@ import express from "express";
 import { db } from "../db/connect.js";
 import bcrypt from "bcrypt";
 import {cleanup, validateSignupInput } from "../utils/validation.js"
+import "dotenv/config"
 
 const router = express.Router();
 
@@ -73,7 +74,7 @@ router.post("/signup", async (req, res) => {
         validateSignupInput(fname, lname, email, password, passwordConf, phone)
 
         // Hash password
-        const hashedPassword = await bcrypt.hash(password, 10);
+        const hashedPassword = await bcrypt.hash(password, process.env.SALT_ROUNDS);
 
         // Insert user into database
         const registerUser = {

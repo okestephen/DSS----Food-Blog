@@ -21,6 +21,18 @@ export const connectDB = () => {
 };
 
 
-// module.exports = {
-//     query: (text, params) => db.query(text, params),
-// };
+/* 
+query model:
+const name_of_query = {
+    text: SQL QUERY,
+    values: [variables to be entered]
+}
+const entry = await db.query(name_of_query);
+
+example: 
+const registerUser = {
+    text: "INSERT INTO users(firstname, lastname, password, email, phonenum) VALUES($1, $2, $3, $4, $5) RETURNING userid",
+    values: [fname, lname, hashedPassword, email, phone],
+};
+const newEntry = await db.query(registerUser);
+*/

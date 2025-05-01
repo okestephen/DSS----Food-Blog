@@ -4,9 +4,9 @@
     <form class="auth-form" action="/signup" method="POST">
         <h2>Sign Up</h2>
 
-        <% if(locals.passwordConf) { %>
+        <% if(locals.error) { %>
             <div class="msg error">
-                 <li><%=passwordConf%> </li>
+                 <li><%=error%> </li>
             </div>
         <% } %>
 

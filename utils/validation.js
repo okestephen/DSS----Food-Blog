@@ -4,7 +4,7 @@ export const cleanup = (data) => {
 };
 
 export const validateSignupInput = (fname, lname, email, password, passwordConf, phone) => {
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{8,}$/;
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
     const emailregex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     const nameregex = /^[a-zA-z-']*$/;
     const phoneRegex = /^\d{10,15}$/;
@@ -27,3 +27,5 @@ export const validateSignupInput = (fname, lname, email, password, passwordConf,
             throw new Error("Invalid phone number")
         }
 };
+
+export const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));

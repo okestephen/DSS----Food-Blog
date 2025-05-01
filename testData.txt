@@ -1,0 +1,59 @@
+////////////////////////  Signup  ////////////////////////
+Successful Sign up:
+First Name:    Alice  
+Last Name:     Johnson  
+Email:         alice@example.com  
+Password:      SecurePass123  
+Confirm Pass:  SecurePass123  
+Phone:         1234567890  
+
+Expected Outcome:
+Passes all validations (regex, matching passwords, required fields)
+Password is hashed and stored in the database
+Redirects to /login
+Console.log: 
+    User created with ID: <userid>
+------------------------------------------------------
+Unsuccesful Sign up:
+First Name:    John
+Last Name:     Doe  
+Email:         johndoe@test.com  
+Password:      SecurePass123  
+Confirm Pass:  SecurePass321  
+Phone:         9876543210  
+
+Expected Outcome:
+Validation fails due to password !== passwordConf.
+Page stays on /signup.
+Renders the same view with an error message:
+    "Passwords do not match"
+No entry is added to the database.
+------------------------------------------------------
+First Name:    John
+Last Name:     Doe  
+Email:         johndoe@test.com  
+Password:      Password
+Confirm Pass:  Password
+Phone:         
+
+Expected Outcome:
+Validation fails due to password not meeting strength standards.
+Page stays on /signup.
+Renders the same view with an error message:
+    "Password does not fit the requirements"
+No entry is added to the database.
+------------------------------------------------------
+First Name:    Alice
+Last Name:     Wonderland 
+Email:         alice@example.com  
+Password:      Password123!
+Confirm Pass:  Password123!
+Phone:         
+
+Expected Outcome:
+Validation fails due to email already existing.
+Page stays on /signup.
+Renders the same view with an error message:
+    "Email Addresss already exists"
+No entry is added to the database.
+------------------------------------------------------

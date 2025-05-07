@@ -10,7 +10,7 @@ Phone:         1234567890
 Expected Outcome:
 Passes all validations (regex, matching passwords, required fields)
 Password is hashed and stored in the database
-Redirects to /login
+Redirects to /profile
 Console.log: 
     User created with ID: <userid>
 ------------------------------------------------------

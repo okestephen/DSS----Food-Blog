@@ -7,6 +7,7 @@ import bodyParser from "body-parser";
 import "dotenv/config";
 import authRoutes from "./routes/auth.js";
 import pageRoutes from "./routes/pages.js";
+import userRoutes from "./routes/user.js";
 
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -25,6 +26,7 @@ connectDB();
 // Routes
 app.use("/", pageRoutes);
 app.use("/", authRoutes);
+app.use("/", userRoutes);
 
 app.listen(PORT, () => {
   console.log(`Listening on port ${PORT}`);

@@ -1,8 +1,8 @@
 import express from "express";
 import { db } from "../db/connect.js";
 import bcrypt from "bcrypt";
-import {cleanup, validateSignupInput, delay } from "../utils/validation.js"
-import "dotenv/config"
+import {cleanup, validateSignupInput, delay } from "../utils/validation.js";
+
 
 const router = express.Router();
 const LOCK_DURATION_MS = 10 * 60 * 1000;
@@ -89,7 +89,8 @@ router.post("/login", async (req, res) => {
         console.log("Welcome ", user.first_name, user.last_name)
 
         // TODO: Create a session or token here
-        res.redirect("/profile");
+        res.redirect(301, `/profile/${user.user_id}`);
+        res.status(401).end()
 
     } catch (error) {
         console.error("Login error: ", error);
@@ -146,7 +147,7 @@ router.post("/signup", async (req, res) => {
         console.log(`User created with ID: ${newEntry.rows[0].user_id}`);
         
 
-        
+
         console.log("Welcome ", user.first_name, user.last_name)
 
         // TODO: Create a session or token here

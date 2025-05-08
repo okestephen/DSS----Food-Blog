@@ -145,10 +145,13 @@ router.post("/signup", async (req, res) => {
 
         const newEntry = await db.query(registerUser);
         console.log(`User created with ID: ${newEntry.rows[0].user_id}`);
-        
+
+        let locateUser = await db.query("SELECT * FROM users WHERE user_id = $1", [newEntry.rows[0].user_id]);
+        let user = locateUser.rows[0]
+        // console.log(locateUser)
 
 
-        console.log("Welcome ", user.first_name, user.last_name)
+        console.log("Welcome", user.first_name, user.last_name)
 
         // TODO: Create a session or token here
         res.redirect("/profile");

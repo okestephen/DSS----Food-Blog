@@ -1,6 +1,6 @@
 import express from "express";
 import { ensureAuthenticated } from "../middleware/authMiddleware.js";
-import { validateSessionIntegrity } from "../sessionIntegrity.js";
+import { validateSessionIntegrity } from "../middleware/sessionIntegrity.js";
 import { db } from "../db/connect.js";
 
 

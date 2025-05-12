@@ -54,6 +54,6 @@ Expected Outcome:
 Validation fails due to email already existing.
 Page stays on /signup.
 Renders the same view with an error message:
-    "Email Addresss already exists"
+    "Invalid Email Address"
 No entry is added to the database.
 ------------------------------------------------------

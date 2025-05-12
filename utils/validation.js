@@ -10,7 +10,7 @@ export const isValidPassword = (password) => {
 };
 
 export const passwordRequirementsMessage = () => {
-    return "Password must include at least:\n- 1 uppercase letter\n- 1 lowercase letter\n- 1 digit\n- Minimum length of 8 characters.";
+    return "Password must include at least:\n- 1 uppercase letter;\n 1 lowercase letter;\n 1 digit;\n Minimum length of 8 characters.";
 };
 
 export const validateSignupInput = (fname, lname, email, password, passwordConf, phone) => {

@@ -4,11 +4,13 @@ import bcrypt from "bcrypt";
 import {cleanup, validateSignupInput, delay, isValidPassword, passwordRequirementsMessage } from "../utils/validation.js";
 import nodemailer from "nodemailer";
 import crypto from "crypto";
-import { error } from "console";
-
 
 const router = express.Router();
-const LOCK_DURATION_MS = 10 * 60 * 1000;
+
+
+const OBSERVATION_WINDOW_MS = 10 * 60 * 1000;  // 10 minutes
+const LOCKOUT_THRESHOLD = 3;
+const MAX_ATTEMPTS = 6;  // Beyond this = permanent lock
 const SALT = 10
 
 // Render login page
@@ -43,50 +45,53 @@ router.post("/login", async (req, res) => {
         const user = result.rows[0];
 
         if (user.is_locked) {
-            const lastFailed = new Date(user.last_failed || 0);
             const now = new Date();
+            const lastFailed = new Date(user.last_failed || 0);
             const elapsed = now - lastFailed;
 
-            if (elapsed < LOCK_DURATION_MS) {
-                await delay(500);
-                throw new Error("Account is temporarily locked. Please try again later.");
-            } else {
-                // unlock afterduration
-                const unlockUser = {
-                    text:  "UPDATE users SET is_locked = false, failed_attempts = 0 WHERE email = $1",
-                    values: [email]
-                }
+            if (user.failed_attempts >= MAX_ATTEMPTS) {
+               throw new Error("Account is permanently locked. Please reset your password.");
+            }
 
-                await db.query(unlockUser);
-                user.failed_attempts = 0;
+            // Within the observation window
+            if (elapsed <= OBSERVATION_WINDOW_MS) {
+               if (user.failed_attempts >= LOCKOUT_THRESHOLD) {
+                  const exponentialDelay = Math.pow(2, user.failed_attempts - LOCKOUT_THRESHOLD) * 1000; // in ms
+                  if (elapsed < exponentialDelay) {
+                    const remaining = Math.ceil((exponentialDelay - elapsed) / 1000);
+                    throw new Error(`Too many attempts. Try again in ${remaining} seconds.`);
+                  }
+                }
+            } else {
+               // Reset counter after window expires
+               user.failed_attempts = 0;
             }
         }
 
         const validPassword = await bcrypt.compare(password, user.password);
         if (!validPassword) {
-            await delay(500);
-            const updatedAttempts = user.failed_attempts + 1
-            const shouldLock = updatedAttempts >= 5;
+            const updatedAttempts = user.failed_attempts + 1;
+            const shouldLock = updatedAttempts >= MAX_ATTEMPTS;
 
-            const denyUser = {
-                text: "UPDATE users SET failed_attempts = $1, is_locked = $2, last_failed = NOW() WHERE email = $3",
-                values: [updatedAttempts, shouldLock, email]
-            }
-            // Denylist user
-            await db.query(denyUser);
-
-            throw new Error( 
-                shouldLock ? "Account locked due to multiple failed attempts." : "Login failed; Invalid email or password."
+            await db.query(
+              "UPDATE users SET failed_attempts = $1, is_locked = $2, last_failed = NOW() WHERE email = $3",
+              [updatedAttempts, shouldLock, email]
             );
+
+            throw new Error(
+              shouldLock
+              ? "Account permanently locked. Please use 'Forgot Password' to reset access."
+              : "Login failed; Invalid email or password."
+            );
+
         }
 
         // Reset failed attempts ont successful login
-        const resetFailed = {
-            text: "UPDATE users SET failed_attempts = 0, is_locked = false WHERE email = $1",
-            values: [email]
-        };
+        await db.query(
+          "UPDATE users SET failed_attempts = 0, is_locked = false, last_failed = NULL WHERE email = $1",
+           [email]
+        );
 
-        await db.query(resetFailed);
 
 
 

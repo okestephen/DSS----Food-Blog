@@ -5,6 +5,9 @@ import {cleanup, validateSignupInput, delay, isValidPassword, passwordRequiremen
 import nodemailer from "nodemailer";
 import crypto from "crypto";
 
+// Pwned password check integration
+import { isPwned } from "../utils/checkPwnedPassword.js";
+
 const router = express.Router();
 
 
@@ -146,6 +149,12 @@ router.post("/signup", async (req, res) => {
 
         // Validate Input
         validateSignupInput(fname, lname, email, password, passwordConf, phone)
+
+        
+        if (await isPwned(password)) {
+           throw new Error("This password has been found in known data breaches. Please choose a different one.");
+        }
+
 
         // Check for existing user
         const checkExisting = {

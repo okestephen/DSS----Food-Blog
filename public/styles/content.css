@@ -32,13 +32,6 @@
     list-style: none;
 }
 
-.success {
-    color: darkgreen;
-    border: 1px solid darkgreen;
-    border-radius: 5px;
-    background-color: lightgreen;
-}
-
 .error {
     color: darkred;
     border: 1px solid darkred;
@@ -51,6 +44,13 @@
     border: 1px solid darkgoldenrod;
     border-radius: 5px;
     background-color: yellow;
+}
+
+.success {
+    color: darkgreen;
+    border: 1px solid darkgreen;
+    border-radius: 5px;
+    background-color: lightgreen;
 }
 
 .auth-content {

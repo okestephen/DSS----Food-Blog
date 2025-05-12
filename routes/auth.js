@@ -189,7 +189,7 @@ router.post("/signup", async (req, res) => {
         );
 
         const user = addSlug.rows[0]
-        console.log(user);
+        // console.log(user);
 
         console.log(`User created with slug: ${user.slug}`);
         console.log("Welcome", user.first_name, user.last_name)

@@ -7,7 +7,6 @@
     <link rel="stylesheet" href="/styles/layout.css">
     <link rel="stylesheet" href="/styles/content.css">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=search" />
-    <script src="password-strength.js"></script>
     <title>Food Blog</title>
 </head>
 <body>
@@ -24,7 +23,7 @@
                    <a href="/submit">Submit a Recipe</a>
                </div>
            </li>
-           <li><a href="/profile/<%= session.user.id %>">Profile</a></li>
+           <li><a href="/profile/<%= session.user.slug %>">Profile</a></li>
            <li><a href="/about">About</a></li>
        </ul>
        <form action="/logout" method="POST">
@@ -42,7 +41,7 @@
            </li>
            <li><a href="/about">About</a></li>
        </ul>
-       <a href="/login">Login</a>
+       <button><a href="/login">Login</a></button>
    <% } %>
 </header>
 

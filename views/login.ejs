@@ -20,7 +20,7 @@
             </div>
         <% } %>
         
-        <!-- First Name -->
+        <!-- Email -->
         <div class="auth-items">
             <label for="email">
                 Email
@@ -29,6 +29,7 @@
         </div>
 
         <!-- Password -->
+         <% if (!step || step === "credentials") { %>
         <div class="auth-items">
             <label for="password">
                 Password
@@ -36,6 +37,18 @@
             <input type="password" name="password" id="password" placeholder="Password" required>
             <a href="/forgot-password">Forgot Password</a>
         </div>
+        <% } %>
+
+        <!-- OTP -->
+         <% if (step === "otp") { %>
+            <input type="hidden" name="step" value="otp">
+            <div class="auth-items">
+                <label for="otp">One-Time Password (OTP)</label>
+                <input type="text" name="otp" id="otp" placeholder="Enter OTP" required>
+            </div>
+            <% } else { %>
+                <input type="hidden" name="step" value="credentials">
+            <% } %> 
 
         <!-- Submit Button -->
         <div class="auth-items">

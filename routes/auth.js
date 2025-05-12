@@ -1,6 +1,5 @@
 import express from "express";
 import { db } from "../db/connect.js";
-import bcrypt from "bcrypt";
 import {cleanup, validateSignupInput, delay, isValidPassword, passwordRequirementsMessage } from "../utils/validation.js";
 import nodemailer from "nodemailer";
 import crypto from "crypto";
@@ -21,27 +20,70 @@ const SALT = 10
 // Render login page
 router.get("/login", (req, res) => {
     const timeout = req.query.timeout;
-    res.render("login.ejs", {error: null, timeout});
+    res.render("login.ejs", {error: null, timeout, step: "credentials"});
 });
   
 // Handle login submission
 router.post("/login", async (req, res) => {
+    let { email, password, otp, step } = req.body;
     try {
-        let { email, password } = req.body;
+        if (step === "otp") {
+        // Step 2: OTP Verification
+        const userResult = await db.query("SELECT * FROM users WHERE email = $1", [email]);
+        if (userResult.rows.length === 0) {
+            return res.render("login.ejs", {
+            error: "Invalid session.",
+            step: "credentials",
+            email
+            });
+        }
+
+        const user = userResult.rows[0];
+
+        const otpResult = await db.query(
+            "SELECT * FROM otps WHERE user_id = $1 AND otp_code = $2 AND otp_expires > NOW() ORDER BY created_at DESC LIMIT 1",
+            [user.user_id, otp]
+        );
+
+        if (otpResult.rows.length === 0) {
+            return res.render("login.ejs", {
+            error: "Invalid or expired OTP.",
+            step: "otp",
+            email
+            });
+        }
+
+        // Clean up OTP
+        await db.query("DELETE FROM otps WHERE user_id = $1", [user.user_id]);
+
+        // Start session
+        req.session.regenerate(err => {
+            if (err) throw err;
+
+            req.session.user = {
+            id: user.user_id,
+            email: user.email,
+            slug: user.slug
+            };
+            req.session.ua = req.get("User-Agent");
+            req.session.ip = req.ip;
+
+            res.redirect(`/profile/${user.slug}`);
+        });
+        return;
+    }
         email = email.trim();
         password = password.trim();
 
         if (!email || !password) {
             await delay(500);
-            throw Error("Empty credentials supplied!");
+            throw Error("Email and password are required.");
         }
 
-        const authenticateCredentials = {
-            text: "SELECT * FROM users WHERE email = $1",
-            values: [email]
-        }
-
-        const result = await db.query(authenticateCredentials);
+        const result = await db.query(
+            "SELECT * FROM users WHERE email = $1",
+            [email]
+        );
         if (result.rows.length === 0) {
             await delay(500);
             throw new Error("Login failed; Invalid email or password.");
@@ -98,33 +140,44 @@ router.post("/login", async (req, res) => {
         );
 
 
+        // Create One-Time Password
+        const otpCode = crypto.randomInt(100000, 999999).toString();
+        const expiry = new Date(Date.now() + 5 * 60 * 1000); // 5 min expiry
 
-
-        console.log("Welcome ", user.first_name, user.last_name)
-
-        // TODO: Create a session or token here
-        req.session.regenerate(err => {
-            if (err) throw err;
-
-            req.session.user = {
-                id: user.user_id,
-                email: user.email,
-                slug: user.slug
-            };
-            req.session.ua = req.get("User-Agent");
-            req.session.ip = req.ip;
-
-            res.redirect(`/profile/${user.slug}`)
+        await db.query(
+            "INSERT INTO otps (user_id, otp_code, otp_expires) VALUES ($1, $2, $3)",
+            [user.user_id, otpCode, expiry]
+        );
+        
+        // Send OTP via email
+        const transporter = nodemailer.createTransport({
+            service: "Gmail",
+            auth: {
+            user: process.env.EMAIL_USER,
+            pass: process.env.EMAIL_PASS
+            },
+        });
+    
+        await transporter.sendMail({
+            to: email,
+            subject: "Your One-Time Password (OTP)",
+            html: `<p>Your OTP is: <strong>${otpCode}</strong>. It expires in 5 minutes.</p>`,
         });
 
-        // res.redirect(`/profile/${user.user_id}`);
-
-
-    
+        // Render same login page with OTP input
+        return res.render("login.ejs", {
+            step: "otp",
+            email,
+            error: null
+        });
 
     } catch (error) {
         console.error("Login error: ", error);
-        res.render("login.ejs", {error: error.message});
+        res.render("login.ejs", {
+            error: error.message,
+            step: step === "otp" ? "otp" : "credentials",
+            email
+        });
     }
 });
 

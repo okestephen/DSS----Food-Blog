@@ -14,11 +14,15 @@
   "dependencies": {
     "bcrypt": "^5.1.1",
     "body-parser": "^2.2.0",
+    "connect-pg-simple": "^10.0.0",
+    "cookie-parser": "^1.4.7",
+    "crypto": "^1.0.1",
     "dotenv": "^16.5.0",
     "ejs": "^3.1.10",
     "express": "^5.1.0",
+    "express-session": "^1.18.1",
     "expressjs": "^1.0.1",
-    "morgan": "^1.10.0",
+    "nodemailer": "^7.0.3",
     "nodemon": "^3.1.9",
     "pg": "^8.14.1"
   }

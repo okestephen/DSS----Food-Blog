@@ -4,9 +4,19 @@
     <form class="auth-form" action="/login" method="POST">
         <h2>Login</h2>
 
+        <% if (typeof timeout !== "undefined") { %>
+           <p class="msg error">Session expired due to inactivity.</p>
+        <% } %>
+
         <% if(locals.error) { %>
             <div class="msg error">
                  <li><%=error%> </li>
+            </div>
+        <% } %>
+
+         <% if(locals.message) { %>
+            <div class="msg success">
+                 <li><%=message%> </li>
             </div>
         <% } %>
         
@@ -24,6 +34,7 @@
                 Password
             </label>
             <input type="password" name="password" id="password" placeholder="Password" required>
+            <a href="/forgot-password">Forgot Password</a>
         </div>
 
         <!-- Submit Button -->

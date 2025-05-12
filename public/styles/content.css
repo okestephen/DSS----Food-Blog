@@ -46,6 +46,13 @@
     background-color: lightcoral;
 }
 
+.warning{
+    color: darkgoldenrod;
+    border: 1px solid darkgoldenrod;
+    border-radius: 5px;
+    background-color: yellow;
+}
+
 .auth-content {
     width: 70%;
     margin: 5px auto;

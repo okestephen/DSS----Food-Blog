@@ -1,7 +1,10 @@
 import express from "express";
 import { db } from "../db/connect.js";
 import bcrypt from "bcrypt";
-import {cleanup, validateSignupInput, delay } from "../utils/validation.js";
+import {cleanup, validateSignupInput, delay, isValidPassword, passwordRequirementsMessage } from "../utils/validation.js";
+import nodemailer from "nodemailer";
+import crypto from "crypto";
+import { error } from "console";
 
 
 const router = express.Router();
@@ -10,7 +13,8 @@ const SALT = 10
 
 // Render login page
 router.get("/login", (req, res) => {
-    res.render("login.ejs");
+    const timeout = req.query.timeout;
+    res.render("login.ejs", {error: null, timeout});
 });
   
 // Handle login submission
@@ -33,7 +37,7 @@ router.post("/login", async (req, res) => {
         const result = await db.query(authenticateCredentials);
         if (result.rows.length === 0) {
             await delay(500);
-            throw new Error("Invalid credentials");
+            throw new Error("Login failed; Invalid email or password.");
         }
 
         const user = result.rows[0];
@@ -72,7 +76,7 @@ router.post("/login", async (req, res) => {
             await db.query(denyUser);
 
             throw new Error( 
-                shouldLock ? "Account locked due to multiple failed attempts." : "Invalid credentials"
+                shouldLock ? "Account locked due to multiple failed attempts." : "Login failed; Invalid email or password."
             );
         }
 
@@ -89,8 +93,23 @@ router.post("/login", async (req, res) => {
         console.log("Welcome ", user.first_name, user.last_name)
 
         // TODO: Create a session or token here
-        res.redirect(301, `/profile/${user.user_id}`);
-        res.status(401).end()
+        req.session.regenerate(err => {
+            if (err) throw err;
+
+            req.session.user = {
+                id: user.user_id,
+                email: user.email
+            };
+            req.session.ua = req.get("User-Agent");
+            req.session.ip = req.ip;
+
+            res.redirect(`/profile/${user.user_id}`)
+        });
+
+        // res.redirect(`/profile/${user.user_id}`);
+
+
+    
 
     } catch (error) {
         console.error("Login error: ", error);
@@ -131,7 +150,7 @@ router.post("/signup", async (req, res) => {
 
         const result = await db.query(checkExisting);
         if (result.rows.length !== 0) {
-            throw new Error("Email Addresss already exists");
+            throw new Error("Invalid Email Address");
         }
 
         // Hash password
@@ -154,17 +173,137 @@ router.post("/signup", async (req, res) => {
         console.log("Welcome", user.first_name, user.last_name)
 
         // TODO: Create a session or token here
-        res.redirect("/profile");
+        req.session.regenerate(err => {   // Stop session fixation
+            if (err) throw err;
+
+            req.session.user = {
+                id: user.user_id,
+                email: user.email
+            };
+
+            // Block stolen sessions used elsewhere
+            req.session.ua = req.get("User-Agent");
+            req.session.ip = req.ip;
+
+            res.redirect(`/profile/${user.user_id}`)
+        });
         
 
     } catch (error) {
         console.error("Error creating user: ", error);
         res.render("signup.ejs", {
-            passwordConf: req.body.passwordConf,
             error: error.message,
         });
     }
 
 });
+
+
+router.post("/logout", (req, res) => {   // Proper Session Invalidation
+    req.session.destroy(err => {
+        if (err) {
+            console.error("Logout error: ", err);
+            return res.redirect("/profile");
+        }
+        res.clearCookie("connect.sid");
+        res.redirect("/login");
+    });
+});
+
+router.get("/forgot-password", (req, res) => {
+    res.render("forgot-password.ejs", {error: null, message: null});
+});
+
+router.post("/forgot-password", async (req, res) => {
+    const {email} = req.body;
+    try {
+        const userResult = await db.query("SELECT * FROM users WHERE email = $1", [email]);
+        if (userResult.rows.length === 0) {
+            return res.render("forgot-password.ejs", { error: null, message: "If that email address is in our database, we will send you an email to reset your password."
+});
+        }
+
+        const token = crypto.randomBytes(32).toString("hex");
+        const expiry = new Date(Date.now() + (1000 * 60 * 60)); 
+
+        await db.query(
+            "UPDATE users SET reset_token = $1, reset_token_expiry = $2 WHERE email = $3",
+            [token, expiry, email]
+        );
+
+        // Send email
+        const resetLink = `http://localhost:3000/reset-password/${token}`;
+
+        // Setyp transport
+        const transporter = nodemailer.createTransport({
+            service: "Gmail",
+            auth: {
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_PASS
+            },
+        });
+
+        await transporter.sendMail({
+            to: email,
+            subject: "Password Reset",
+            html: `<p>Click <a href="${resetLink}">here</a> to reset your password.</p>`,
+        });
+
+
+        res.render("forgot-password.ejs", { error: null, message: "If that email address is in our database, we will send you an email to reset your password."
+});
+    } catch (err) {
+        console.error("Forgot password error: ", err);
+        res.render("forgot-password.ejs", {error: "Something went wrong", message: null});
+    }
+});
+
+router.get("/reset-password/:token", async (req, res) => {
+    const { token } = req.params;
+    const result = await db.query(
+        "SELECT * FROM users WHERE reset_token = $1 AND reset_tokenOexpiry > NOW()",
+        [token]
+    );
+
+    if (result.rows.length === 0) {
+        return res.send("Invalid or expired token");
+    }
+
+    res.render("reset-password.ejs", { token, error: null});
+});
+
+router.post("/reset-password/:token", async (req, res) => {
+    const { token } = req.params;
+    const { password, confirmPassword } = req.body;
+
+    if (password !== confirmPassword){
+        return res.render("reset-password.ejs", {token, error: "Passwords do not match."});
+    }
+    const userResult = await db.query(
+        "SELECT * FROM users WHERE reset_token = $1 AND reset_token_expiry > NOW()", 
+        [token]
+    );
+    if (userResult.rows.length === 0) {
+        return res.send("Invalid or expired token")
+    }
+
+    if (!isValidPassword(password)){
+        return res.render("reset-password.ejs", {
+            token,
+            error: passwordRequirementsMessage()
+        });
+    }
+
+    const hashedPassword = await bcrypt.hash(password.trim(), 10)
+
+    await db.query(
+        "UPDATE users SET password = $1, reset_token = NULL, reset_token_expiry = NULL WHERE reset_token = $2",
+        [hashedPassword, token]
+    );
+
+    res.redirect("/login?reset=success");
+})
+
+
 
 export default router;

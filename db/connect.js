@@ -1,8 +1,10 @@
-import pg from "pg";
+import pkg from "pg";
 import "dotenv/config";
 
+const { Pool } = pkg;
+
 // Database environement 
-export const db = new pg.Client({
+export const db = new Pool({
     user: process.env.DB_USER,
     host: process.env.DB_HOST,
     database: process.env.DB_NAME,

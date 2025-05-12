@@ -1,11 +1,36 @@
 <%- include("partials/header.ejs") %>
-<form action="Search" method="POST">
-    <div class="search">
-        <span class="search-icon material-symbols-outlined">search</span>
-        <input class="search-input" type="search" placeholder="Browse Recipes">
-    </div>
-</form>
-<div class="results">
-    
-</div>
+
+<main class="container">
+  <h1>Browse Recipes</h1>
+
+  <form action="/browse" method="GET" class="search">
+    <span class="search-icon material-symbols-outlined">search</span>
+    <input
+      class="search-input"
+      type="search"
+      name="q"
+      placeholder="Search recipes…"
+      value="<%= searchTerm || '' %>"
+    >
+  </form>
+
+  <div class="results grid">
+    <% if (recipes && recipes.length) { %>
+      <% recipes.forEach(recipe => { %>
+        <div class="card">
+          <a href="/recipe/<%= recipe.id %>">
+            <img
+              src="/uploads/<%= recipe.main_image %>"
+              alt="<%= recipe.title %>"
+            >
+            <h3><%= recipe.title %></h3>
+          </a>
+        </div>
+      <% }) %>
+    <% } else { %>
+      <p>No recipes found.</p>
+    <% } %>
+  </div>
+</main>
+
 <%- include("partials/footer.ejs") %>

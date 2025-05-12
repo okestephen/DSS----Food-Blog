@@ -1,4 +1,5 @@
 // Required Modules
+
 import express, { response } from "express";
 import { dirname } from "path";
 import { fileURLToPath } from "url";
@@ -12,7 +13,7 @@ import session from "express-session";
 import pgSession from "connect-pg-simple";
 const PgSession = pgSession(session);
 // ---------------
-
+import otpRoutes from "./routes/otp.js";
 import authRoutes from "./routes/auth.js";
 import pageRoutes from "./routes/pages.js";
 import { idleTimout } from "./middleware/idleTimeout.js";
@@ -61,6 +62,7 @@ app.use((req, res, next) => {
 
 
 // Routes
+app.use("/", otpRoutes);
 app.use("/", pageRoutes);
 app.use("/", authRoutes);
 // app.use("/", userRoutes);

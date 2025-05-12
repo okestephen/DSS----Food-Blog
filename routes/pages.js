@@ -24,20 +24,23 @@ router.get("/browse", (req, res) => {
 });
 
 
-router.get("/profile/:user_id", ensureAuthenticated, validateSessionIntegrity, async (req, res) => {
-    const {user_id} = req.params;
-    const findUser = {
-        text: "SELECT * FROM users WHERE user_id = $1",
-        values: [user_id]
-    };
-    const loadUser = await db.query(findUser);
-    const user = loadUser.rows[0];
-    if (!user) {
-      return res.status(404).render("error.ejs", { message: "User not found." });
+router.get("/profile/:slug", ensureAuthenticated, validateSessionIntegrity, async (req, res) => {
+    const {slug} = req.params;
+    const result = await db.query(
+        "SELECT * FROM users WHERE slug = $1",
+        [slug]
+    );
+
+    if (result.rows.length === 0){
+        return res.status(404).send("User not found")
     }
 
-    // Debug
-    // console.log("Load user: ", user);
+    const user = result.rows[0];
+
+    // Block acess if slug isn't for logged-in user
+    if (user.user_id !== req.session.user.id){
+        res.status(403).send("Access Denied");
+    }
     
     res.render("user-profile.ejs", {user});
 });

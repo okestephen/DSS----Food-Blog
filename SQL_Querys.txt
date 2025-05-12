@@ -3,12 +3,15 @@ CREATE TABLE users (
     first_name TEXT NOT NULL,
     last_name TEXT NOT NULL,
     email TEXT UNIQUE NOT NULL,
+    slug TEXT UNIQUE,
     password TEXT NOT NULL,
     phone TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     failed_attempts INTEGER DEFAULT 0,
     is_locked BOOLEAN DEFAULT FALSE,
     last_failed TIMESTAMP
+    reset_token VARCHAR,
+    reset_token_expiry TIMESTAMP
 );
 
 

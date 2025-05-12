@@ -4,9 +4,11 @@ import bcrypt from "bcrypt";
 import {cleanup, validateSignupInput, delay, isValidPassword, passwordRequirementsMessage } from "../utils/validation.js";
 import nodemailer from "nodemailer";
 import crypto from "crypto";
+import slugify from "slugify";
 
 // Pwned password check integration
 import { isPwned } from "../utils/checkPwnedPassword.js";
+import { hashPassword, verifyPassword } from "../utils/crypto.js";
 
 const router = express.Router();
 
@@ -71,7 +73,7 @@ router.post("/login", async (req, res) => {
             }
         }
 
-        const validPassword = await bcrypt.compare(password, user.password);
+        const validPassword = await verifyPassword(password, user.password);
         if (!validPassword) {
             const updatedAttempts = user.failed_attempts + 1;
             const shouldLock = updatedAttempts >= MAX_ATTEMPTS;
@@ -106,12 +108,13 @@ router.post("/login", async (req, res) => {
 
             req.session.user = {
                 id: user.user_id,
-                email: user.email
+                email: user.email,
+                slug: user.slug
             };
             req.session.ua = req.get("User-Agent");
             req.session.ip = req.ip;
 
-            res.redirect(`/profile/${user.user_id}`)
+            res.redirect(`/profile/${user.slug}`)
         });
 
         // res.redirect(`/profile/${user.user_id}`);
@@ -168,22 +171,27 @@ router.post("/signup", async (req, res) => {
         }
 
         // Hash password
-        const hashedPassword = await bcrypt.hash(password, SALT);
+        const hashedPassword = await hashPassword(password);
 
         // Insert user into database
-        const registerUser = {
-            text: "INSERT INTO users(first_name, last_name, password, email, phone) VALUES($1, $2, $3, $4, $5) RETURNING user_id",
-            values: [fname, lname, hashedPassword, email, phone],
-        }
+        const registerUser = await db.query(
+            "INSERT INTO users(first_name, last_name, password, email, phone) VALUES($1, $2, $3, $4, $5) RETURNING *",
+            [fname, lname, hashedPassword, email, phone]
+        );
 
-        const newEntry = await db.query(registerUser);
-        console.log(`User created with ID: ${newEntry.rows[0].user_id}`);
+        const newEntry = registerUser.rows[0]
+        
+        const slug = slugify(`${newEntry.first_name}-${newEntry.last_name}-${newEntry.user_id}`, {lower: true});
 
-        let locateUser = await db.query("SELECT * FROM users WHERE user_id = $1", [newEntry.rows[0].user_id]);
-        let user = locateUser.rows[0]
-        // console.log(locateUser)
+        const addSlug = await db.query(
+            "UPDATE users SET slug = $1 WHERE user_id = $2 RETURNING *",
+            [slug, newEntry.user_id]
+        );
 
+        const user = addSlug.rows[0]
+        console.log(user);
 
+        console.log(`User created with slug: ${user.slug}`);
         console.log("Welcome", user.first_name, user.last_name)
 
         // TODO: Create a session or token here
@@ -192,14 +200,15 @@ router.post("/signup", async (req, res) => {
 
             req.session.user = {
                 id: user.user_id,
-                email: user.email
+                email: user.email,
+                slug: user.slug,
             };
 
             // Block stolen sessions used elsewhere
             req.session.ua = req.get("User-Agent");
             req.session.ip = req.ip;
 
-            res.redirect(`/profile/${user.user_id}`)
+            res.redirect(`/profile/${user.slug}`)
         });
         
 
@@ -234,7 +243,7 @@ router.post("/forgot-password", async (req, res) => {
         const userResult = await db.query("SELECT * FROM users WHERE email = $1", [email]);
         if (userResult.rows.length === 0) {
             return res.render("forgot-password.ejs", { error: null, message: "If that email address is in our database, we will send you an email to reset your password."
-});
+           });
         }
 
         const token = crypto.randomBytes(32).toString("hex");
@@ -256,12 +265,18 @@ router.post("/forgot-password", async (req, res) => {
                 pass: process.env.EMAIL_PASS
             },
         });
-
-        await transporter.sendMail({
-            to: email,
-            subject: "Password Reset",
-            html: `<p>Click <a href="${resetLink}">here</a> to reset your password.</p>`,
-        });
+        
+        try {
+            await transporter.sendMail({
+               to: email,
+               subject: "Password Reset",
+               html: `<p>Click <a href="${resetLink}">here</a> to reset your password.</p>`,
+            });
+        } catch (err) {
+            console.error("Email send error:", err.response?.data || err.message);
+            throw new Error("Failed to send reset email.");
+        }
+        
 
 
         res.render("forgot-password.ejs", { error: null, message: "If that email address is in our database, we will send you an email to reset your password."
@@ -275,7 +290,7 @@ router.post("/forgot-password", async (req, res) => {
 router.get("/reset-password/:token", async (req, res) => {
     const { token } = req.params;
     const result = await db.query(
-        "SELECT * FROM users WHERE reset_token = $1 AND reset_tokenOexpiry > NOW()",
+        "SELECT * FROM users WHERE reset_token = $1 AND reset_token_expiry > NOW()",
         [token]
     );
 
@@ -308,7 +323,14 @@ router.post("/reset-password/:token", async (req, res) => {
         });
     }
 
-    const hashedPassword = await bcrypt.hash(password.trim(), 10)
+    if (await isPwned(password)) {
+        return res.render("/reset-password.ejs", {
+            token,
+            error: "This password has been found in known data breaches. Please choose a different one."
+        });
+    }
+
+    const hashedPassword = await hashPassword(password);
 
     await db.query(
         "UPDATE users SET password = $1, reset_token = NULL, reset_token_expiry = NULL WHERE reset_token = $2",

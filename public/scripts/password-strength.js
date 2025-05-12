@@ -1,20 +1,4 @@
-<%- include("partials/header.ejs") %>
-<div class="left"></div>
-<form class="auth-content" action="/reset-password/<%=token %>" method="post">
-    <h2>Reset Password</h2>
-    <% if (error){ %> 
-       <div class="msg error">
-           <li><%= error %></li>
-       </div>
-   <% } %>
-     <div class="auth-items">
-            <label for="password">
-                New Password
-            </label>
-            <input type="password" name="password" id="password" placeholder="Password" required>
-            <div id="strength-message"></div>
-                <script>
-                    const passwordInput = document.getElementById("password");
+const passwordInput = document.getElementById("password");
                     const message = document.getElementById("strength-message");
 
                     passwordInput.addEventListener("input", () => {
@@ -52,24 +36,3 @@
                                 break;
                         }
                     });
-
-                </script>
-        </div>
-        
-        
-        <!-- Password Confirmation -->
-        <div class="auth-items">
-            <label for="confirmPassword">
-                Confirm Password
-            </label>
-            <input type="password" name="confirmPassword" id="confirmPassword" placeholder="Password" required>
-        </div>
-
-
-    <div class="auth-items">
-        <button class="btn btn-big" type="submit">Reset</button>
-    </div>
-    
-</form>
-<div class="right"></div>
-<%- include("partials/footer.ejs") %>

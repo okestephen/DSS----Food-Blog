@@ -1,0 +1,155 @@
+<%- include("partials/header.ejs") %>
+
+<main class="container">
+  <h1>Submit a New Recipe</h1>
+
+  <form
+    id="recipeForm"
+    action="/submit-recipe"
+    method="POST"
+    enctype="multipart/form-data"
+  >
+    <!-- TITLE -->
+    <div class="form-section">
+      <label for="title">Recipe Title*</label>
+      <input
+        type="text"
+        id="title"
+        name="title"
+        placeholder="e.g. Classic Pancakes"
+        required
+      >
+    </div>
+
+    <!-- DESCRIPTION -->
+    <div class="form-section">
+      <label for="description">Short Description*</label>
+      <textarea
+        id="description"
+        name="description"
+        rows="3"
+        placeholder="A quick, fluffy breakfast treat…"
+        required
+      ></textarea>
+    </div>
+
+    <!-- INGREDIENTS -->
+    <div class="form-section">
+      <label>Ingredients*</label>
+      <div id="ingredientsList" class="dynamic-list">
+        <input
+          type="text"
+          name="ingredients[]"
+          placeholder="e.g. 1 cup flour"
+          required
+        >
+      </div>
+      <button
+        type="button"
+        class="small-btn"
+        onclick="addIngredient()"
+      >+ Add Ingredient</button>
+    </div>
+
+    <!-- STEPS -->
+    <div class="form-section">
+      <label>Steps / Instructions*</label>
+      <div id="stepsList" class="dynamic-list">
+        <input
+          type="text"
+          name="steps[]"
+          placeholder="e.g. Mix flour and sugar"
+          required
+        >
+      </div>
+      <button
+        type="button"
+        class="small-btn"
+        onclick="addStep()"
+      >+ Add Step</button>
+    </div>
+
+    <!-- TIMES & SERVINGS -->
+    <div class="form-section">
+      <label for="prep_time">Prep Time (mins)*</label>
+      <input
+        type="number"
+        id="prep_time"
+        name="prep_time"
+        min="1"
+        required
+      >
+    </div>
+    <div class="form-section">
+      <label for="cook_time">Cook Time (mins)*</label>
+      <input
+        type="number"
+        id="cook_time"
+        name="cook_time"
+        min="1"
+        required
+      >
+    </div>
+    <div class="form-section">
+      <label for="servings">Servings*</label>
+      <input
+        type="number"
+        id="servings"
+        name="servings"
+        min="1"
+        required
+      >
+    </div>
+
+    <!-- TAGS -->
+    <div class="form-section">
+      <label for="tags">Tags / Categories</label>
+      <select id="tags" name="tags[]" multiple>
+        <option value="vegan">Vegan</option>
+        <option value="vegetarian">Vegetarian</option>
+        <option value="gluten-free">Gluten-Free</option>
+        <option value="dessert">Dessert</option>
+        <option value="breakfast">Breakfast</option>
+      </select>
+    </div>
+
+    <!-- IMAGES & VIDEO -->
+    <div class="form-section">
+      <label for="main_image">Main Image*</label>
+      <input
+        type="file"
+        id="main_image"
+        name="main_image"
+        accept="image/*"
+        required
+      >
+    </div>
+    <div class="form-section">
+      <label for="extra_images">Additional Images</label>
+      <input
+        type="file"
+        id="extra_images"
+        name="extra_images[]"
+        accept="image/*"
+        multiple
+      >
+    </div>
+    <div class="form-section">
+      <label for="video">YouTube URL (optional)</label>
+      <input
+        type="url"
+        id="video"
+        name="video_url"
+        placeholder="https://youtu.be/…"
+      >
+    </div>
+
+    <!-- SUBMIT -->
+    <div class="form-section d-grid">
+      <button type="submit" class="btn">Submit Recipe</button>
+    </div>
+  </form>
+</main>
+
+<script src="/scripts/script.js"></script>
+<%- include("partials/footer.ejs") %>

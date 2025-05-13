@@ -1,4 +1,4 @@
-const IDLE_TIMEOUT = 1000 * 60 * 1
+const IDLE_TIMEOUT = 1000 * 60 * 15
 
 
 // Logs user out after a certain duration of inactivity

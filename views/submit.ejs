@@ -1,155 +1,173 @@
 <%- include("partials/header.ejs") %>
 
-<main class="container">
-  <h1>Submit a New Recipe</h1>
+<h1><%= editing ? "Edit Recipe" : "Submit a New Recipe" %></h1>
 
-  <form
-    id="recipeForm"
-    action="/submit-recipe"
-    method="POST"
-    enctype="multipart/form-data"
-  >
-    <!-- TITLE -->
-    <div class="form-section">
-      <label for="title">Recipe Title*</label>
-      <input
-        type="text"
-        id="title"
-        name="title"
-        placeholder="e.g. Classic Pancakes"
-        required
-      >
-    </div>
+<form id="recipeForm"
+  action="<%= editing ? '/recipe/' + recipe.recipe_id + '/edit' : '/submit-recipe' %>"
+  method="POST"
+  enctype="multipart/form-data">
 
-    <!-- DESCRIPTION -->
-    <div class="form-section">
-      <label for="description">Short Description*</label>
-      <textarea
-        id="description"
-        name="description"
-        rows="3"
-        placeholder="A quick, fluffy breakfast treat…"
-        required
-      ></textarea>
-    </div>
+  <div class="form-section">
+    <label for="title">Recipe Title*</label>
+    <input type="text" id="title" name="title" required value="<%= recipe?.title || '' %>">
+  </div>
 
-    <!-- INGREDIENTS -->
-    <div class="form-section">
-      <label>Ingredients*</label>
-      <div id="ingredientsList" class="dynamic-list">
-        <input
-          type="text"
-          name="ingredients[]"
-          placeholder="e.g. 1 cup flour"
-          required
-        >
-      </div>
-      <button
-        type="button"
-        class="small-btn"
-        onclick="addIngredient()"
-      >+ Add Ingredient</button>
-    </div>
+  <div class="form-section">
+    <label for="description">Short Description*</label>
+    <textarea id="description" name="description" rows="3" required><%= recipe?.description || '' %></textarea>
+  </div>
 
-    <!-- STEPS -->
-    <div class="form-section">
-      <label>Steps / Instructions*</label>
-      <div id="stepsList" class="dynamic-list">
-        <input
-          type="text"
-          name="steps[]"
-          placeholder="e.g. Mix flour and sugar"
-          required
-        >
-      </div>
-      <button
-        type="button"
-        class="small-btn"
-        onclick="addStep()"
-      >+ Add Step</button>
+  <!-- INGREDIENTS -->
+  <div class="form-section">
+    <label>Ingredients*</label>
+    <div id="ingredientsList" class="dynamic-list">
+      <% if (editing && recipe.ingredients?.length) { %>
+        <% recipe.ingredients.forEach(i => { %>
+          <div class="ingredient-item">
+            <input type="text" name="ingredients[]" value="<%= i %>" required>
+            <button type="button" onclick="removeItem(this)">Remove</button>
+          </div>
+        <% }) %>
+      <% } else { %>
+        <div class="ingredient-item">
+          <input type="text" name="ingredients[]" placeholder="e.g., 1 cup flour" required>
+          <button type="button" onclick="removeItem(this)">Remove</button>
+        </div>
+      <% } %>
     </div>
+    <button type="button" class="small-btn" onclick="addIngredient()">+ Add Ingredient</button>
+  </div>
 
-    <!-- TIMES & SERVINGS -->
-    <div class="form-section">
-      <label for="prep_time">Prep Time (mins)*</label>
-      <input
-        type="number"
-        id="prep_time"
-        name="prep_time"
-        min="1"
-        required
-      >
+  <!-- STEPS -->
+  <div class="form-section">
+    <label>Steps / Instructions*</label>
+    <div id="stepsList" class="dynamic-list">
+      <% if (editing && recipe.steps?.length) { %>
+        <% recipe.steps.forEach(s => { %>
+          <div class="step-item">
+            <input type="text" name="steps[]" value="<%= s %>" required>
+            <button type="button" onclick="removeItem(this)">Remove</button>
+          </div>
+        <% }) %>
+      <% } else { %>
+        <div class="step-item">
+          <input type="text" name="steps[]" placeholder="e.g., Mix flour and sugar" required>
+          <button type="button" onclick="removeItem(this)">Remove</button>
+        </div>
+      <% } %>
     </div>
-    <div class="form-section">
-      <label for="cook_time">Cook Time (mins)*</label>
-      <input
-        type="number"
-        id="cook_time"
-        name="cook_time"
-        min="1"
-        required
-      >
-    </div>
-    <div class="form-section">
-      <label for="servings">Servings*</label>
-      <input
-        type="number"
-        id="servings"
-        name="servings"
-        min="1"
-        required
-      >
-    </div>
+    <button type="button" class="small-btn" onclick="addStep()">+ Add Step</button>
+  </div>
 
-    <!-- TAGS -->
-    <div class="form-section">
-      <label for="tags">Tags / Categories</label>
-      <select id="tags" name="tags[]" multiple>
-        <option value="vegan">Vegan</option>
-        <option value="vegetarian">Vegetarian</option>
-        <option value="gluten-free">Gluten-Free</option>
-        <option value="dessert">Dessert</option>
-        <option value="breakfast">Breakfast</option>
-      </select>
-    </div>
+  <div class="form-section">
+    <label for="prep_time">Preparation Time (minutes)*</label>
+    <input type="number" id="prep_time" name="prep_time" min="1" required value="<%= recipe?.prep_time || '' %>">
+  </div>
 
-    <!-- IMAGES & VIDEO -->
-    <div class="form-section">
-      <label for="main_image">Main Image*</label>
-      <input
-        type="file"
-        id="main_image"
-        name="main_image"
-        accept="image/*"
-        required
-      >
-    </div>
-    <div class="form-section">
-      <label for="extra_images">Additional Images</label>
-      <input
-        type="file"
-        id="extra_images"
-        name="extra_images[]"
-        accept="image/*"
-        multiple
-      >
-    </div>
-    <div class="form-section">
-      <label for="video">YouTube URL (optional)</label>
-      <input
-        type="url"
-        id="video"
-        name="video_url"
-        placeholder="https://youtu.be/…"
-      >
-    </div>
+  <div class="form-section">
+    <label for="cook_time">Cooking Time (minutes)*</label>
+    <input type="number" id="cook_time" name="cook_time" min="1" required value="<%= recipe?.cook_time || '' %>">
+  </div>
 
-    <!-- SUBMIT -->
-    <div class="form-section d-grid">
-      <button type="submit" class="btn">Submit Recipe</button>
-    </div>
-  </form>
-</main>
+  <div class="form-section">
+    <label for="servings">Servings*</label>
+    <input type="number" id="servings" name="servings" min="1" required value="<%= recipe?.servings || '' %>">
+  </div>
 
-<script src="/scripts/script.js"></script>
+  <div class="form-section">
+    <label for="tags">Tags / Categories</label>
+    <select id="tags" name="tags[]" multiple>
+      <option value="vegan" <%= recipe?.tags?.includes('vegan') ? 'selected' : '' %>>Vegan</option>
+      <option value="vegetarian" <%= recipe?.tags?.includes('vegetarian') ? 'selected' : '' %>>Vegetarian</option>
+      <option value="gluten-free" <%= recipe?.tags?.includes('gluten-free') ? 'selected' : '' %>>Gluten-Free</option>
+      <option value="dessert" <%= recipe?.tags?.includes('dessert') ? 'selected' : '' %>>Dessert</option>
+      <option value="breakfast" <%= recipe?.tags?.includes('breakfast') ? 'selected' : '' %>>Breakfast</option>
+    </select>
+  </div>
+
+  <div class="form-section">
+    <label for="main_image">Main Image*</label>
+    <input type="file" id="main_image" name="main_image" accept="image/*" <%= editing ? '' : 'required' %>>
+    <button type="button" onclick="document.getElementById('main_image').value = ''">Clear</button>
+  </div>
+
+  <div class="form-section">
+    <label for="extra_images">Additional Images</label>
+    <input type="file" id="extra_images" name="extra_images" accept="image/*" multiple>
+    <button type="button" onclick="document.getElementById('extra_images').value = ''">Clear</button>
+  </div>
+
+  <% if (editing && recipe.extra_images?.length) { %>
+    <div class="form-section">
+      <label>Existing Images</label>
+      <% recipe.extra_images.forEach(img => { %>
+        <div class="existing-image">
+          <img src="/uploads/<%= img %>" alt="Extra image" style="max-height: 100px; max-width: 100px;">
+          <label><input type="checkbox" name="delete_images[]" value="<%= img %>"> Delete this image</label>
+        </div>
+      <% }) %>
+    </div>
+  <% } %>
+
+  <div class="form-section">
+    <label for="video">YouTube Video URL (optional)</label>
+    <input type="url" id="video" name="video" value="<%= recipe?.video_url || '' %>">
+  </div>
+
+  <div class="form-section">
+    <label>
+      <input type="checkbox" name="allow_comments" <%= recipe?.allow_comments !== false ? 'checked' : '' %>>
+      Allow Comments
+    </label>
+  </div>
+
+  <div class="form-section">
+    <button type="submit" class="btn"><%= editing ? "Update Recipe" : "Submit Recipe" %></button>
+  </div>
+
+</form>
+
+<script>
+  function addIngredient() {
+    const div = document.getElementById("ingredientsList");
+    const container = document.createElement("div");
+    container.className = "ingredient-item";
+    const input = document.createElement("input");
+    input.type = "text";
+    input.name = "ingredients[]";
+    input.placeholder = "e.g., 1 cup flour";
+    input.required = true;
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.innerText = "Remove";
+    remove.onclick = function () { removeItem(remove); };
+    container.appendChild(input);
+    container.appendChild(remove);
+    div.appendChild(container);
+  }
+
+  function addStep() {
+    const div = document.getElementById("stepsList");
+    const container = document.createElement("div");
+    container.className = "step-item";
+    const input = document.createElement("input");
+    input.type = "text";
+    input.name = "steps[]";
+    input.placeholder = "e.g., Mix flour and sugar";
+    input.required = true;
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.innerText = "Remove";
+    remove.onclick = function () { removeItem(remove); };
+    container.appendChild(input);
+    container.appendChild(remove);
+    div.appendChild(container);
+  }
+
+  function removeItem(button) {
+    const container = button.parentElement;
+    container.remove();
+  }
+</script>
+
 <%- include("partials/footer.ejs") %>

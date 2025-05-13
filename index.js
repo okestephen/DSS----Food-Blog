@@ -1,33 +1,38 @@
 // Required Modules
 import express, { response } from "express";
-import { dirname } from "path";
+import path, {dirname} from "path";
 import { fileURLToPath } from "url";
 import { connectDB, db } from "./db/connect.js";
 import bodyParser from "body-parser";
 import "dotenv/config";
-
-// Session Modules
 import cookieParser from "cookie-parser";
 import session from "express-session";
 import pgSession from "connect-pg-simple";
-const PgSession = pgSession(session);
-// ---------------
-
 import authRoutes from "./routes/auth.js";
 import pageRoutes from "./routes/pages.js";
 import { idleTimout } from "./middleware/idleTimeout.js";
-// import userRoutes from "./routes/user.js";
+
+// ---------------------------------------------------------
+import fs from "fs";
+// ---------------------------------------------------------
 
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
-
 const app = express();
 const PORT = 3000;
+const PgSession = pgSession(session);
 
 
+app.set("view engine", "ejs");
 app.use(bodyParser.urlencoded({ extended: true}));
 app.use(express.static("public"))
 
+// ------------------------------------------------------------
+const uploadDir = path.join(__dirname, "public", "uploads");
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+// ------------------------------------------------------------
 
 // Connect to DB
 connectDB();
@@ -63,7 +68,7 @@ app.use((req, res, next) => {
 // Routes
 app.use("/", pageRoutes);
 app.use("/", authRoutes);
-// app.use("/", userRoutes);
+
 
 app.get("/", (req, res) => {
   console.log(req.session);

@@ -1,74 +1,59 @@
 <%- include("partials/header.ejs") %>
 
-<main class="container">
-  <% if (!recipe) { %>
-    <h2>Recipe not found.</h2>
-  <% } else { %>
-    <article class="recipe-detail">
-      <h1><%= recipe.title %></h1>
+<% if (!recipe) { %>
+  <h2>Recipe not found.</h2>
+<% } else { %>
+  <article>
+    <h1><%= recipe.title %></h1>
+   <% if (recipe.main_image) { %>
+  <img src="/uploads/<%= recipe.main_image %>" alt="<%= recipe.title %> main image" />
+<% } %>
 
-      <img
-        src="/uploads/<%= recipe.main_image %>"
-        class="main-img"
-        alt="<%= recipe.title %>"
-      >
+<% if (recipe.extra_images && recipe.extra_images.length) { %>
+  <h3>More Photos</h3>
+  <div class="extra-images">
+    <% recipe.extra_images.forEach(img => { %>
+      <img src="/uploads/<%= img %>" alt="Extra image">
+    <% }) %>
+  </div>
+<% } %>
 
-      <p><%= recipe.description %></p>
+    <p><%= recipe.description %></p>
 
-      <section>
-        <h2>Ingredients</h2>
-        <ul>
-          <% recipe.ingredients.forEach(item => { %>
-            <li><%= item %></li>
-          <% }) %>
-        </ul>
-      </section>
+    <h2>Ingredients</h2>
+    <ul>
+      <% recipe.ingredients.forEach(i => { %>
+        <li><%= i %></li>
+      <% }) %>
+    </ul>
 
-      <section>
-        <h2>Steps</h2>
-        <ol>
-          <% recipe.steps.forEach(step => { %>
-            <li><%= step %></li>
-          <% }) %>
-        </ol>
-      </section>
+    <h2>Steps</h2>
+    <ol>
+      <% recipe.steps.forEach(s => { %>
+        <li><%= s %></li>
+      <% }) %>
+    </ol>
 
-      <p><strong>Prep:</strong> <%= recipe.prep_time %> mins</p>
-      <p><strong>Cook:</strong> <%= recipe.cook_time %> mins</p>
-      <p><strong>Serves:</strong> <%= recipe.servings %></p>
+    <p><strong>Prep Time:</strong> <%= recipe.prep_time %> mins</p>
+    <p><strong>Cook Time:</strong> <%= recipe.cook_time %> mins</p>
+    <p><strong>Servings:</strong> <%= recipe.servings %></p>
 
-      <% if (recipe.tags && recipe.tags.length) { %>
-        <p>Tags:
-          <% recipe.tags.forEach(tag => { %>
-            <span class="badge"><%= tag %></span>
-          <% }) %>
-        </p>
-      <% } %>
+    <% if (recipe.tags && recipe.tags.length) { %>
+      <p><strong>Tags:</strong> <%= recipe.tags.join(", ") %></p>
+    <% } %>
 
-      <% if (recipe.video_url) { %>
-        <div class="video">
-          <iframe
-            src="<%= recipe.video_url.replace('watch?v=', 'embed/') %>"
-            allowfullscreen
-          ></iframe>
-        </div>
-      <% } %>
+    <% if (recipe.video_url) { %>
+      <iframe width="560" height="315" src="<%= recipe.video_url.replace('watch?v=', 'embed/') %>"
+        frameborder="0" allowfullscreen></iframe>
+    <% } %>
 
-      <% if (recipe.extra_images && recipe.extra_images.length) { %>
-        <div class="extra-images">
-          <% recipe.extra_images.forEach(img => { %>
-            <img
-              src="/uploads/<%= img %>"
-              width="120"
-              alt="Extra image"
-            >
-          <% }) %>
-        </div>
-      <% } %>
-
-      <!-- (Later: Edit/Delete buttons for the owner) -->
-    </article>
-  <% } %>
-</main>
+    <% if (session.user && session.user.id === recipe.user_id) { %>
+      <a href="/recipe/<%= recipe.recipe_id %>/edit" class="btn">Edit</a>
+      <form action="/recipe/<%= recipe.recipe_id %>/delete" method="POST" style="display:inline;">
+        <button type="submit" class="btn btn-danger">Delete</button>
+      </form>
+    <% } %>
+  </article>
+<% } %>
 
 <%- include("partials/footer.ejs") %>

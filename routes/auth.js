@@ -203,9 +203,11 @@ router.post("/login", async (req, res) => {
     const otpCode = crypto.randomInt(100000, 999999).toString();
     const expiry = new Date(Date.now() + 5 * 60 * 1000);  // 5 min Expiry
 
+    const hashedOtp = await bcrypt.hash(otpCode, 10);
+
     await db.query(
       "INSERT INTO otps (user_id, otp_code, otp_expires) VALUES ($1, $2, $3)",
-      [user.user_id, otpCode, expiry]
+      [user.user_id, hashedOtp, expiry]
     );
 
     await logOtpAction(db, user.user_id, "generated", req);

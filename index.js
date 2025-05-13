@@ -1,5 +1,4 @@
 // Required Modules
-
 import express, { response } from "express";
 import { dirname } from "path";
 import { fileURLToPath } from "url";
@@ -13,27 +12,24 @@ import session from "express-session";
 import pgSession from "connect-pg-simple";
 const PgSession = pgSession(session);
 // ---------------
-import otpRoutes from "./routes/otp.js";
+
 import authRoutes from "./routes/auth.js";
 import pageRoutes from "./routes/pages.js";
 import { idleTimout } from "./middleware/idleTimeout.js";
 // import userRoutes from "./routes/user.js";
 
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
+const __dirname = dirname(fileURLToPath(import.meta.url))
 
 const app = express();
 const PORT = 3000;
 
-app.set("view engine", "ejs");
-app.set("views", path.join(__dirname, "views"));
 
-// ─── static / bodyparsing / uploads ────────────────────────────────────────
-app.use(express.static(path.join(__dirname, "public")));
-app.use("/uploads", express.static(path.join(__dirname, "public", "uploads")));
-app.use(bodyParser.urlencoded({ extended: true }));
-// app.use(express.static("public"))
+app.use(bodyParser.urlencoded({ extended: true}));
+app.use(express.static("public"))
 
+
+// Connect to DB
 connectDB();
 
 // Session configuration
@@ -64,11 +60,10 @@ app.use((req, res, next) => {
 });
 
 
-// app.use("/", otpRoutes);
-app.use("/", pageRoutes);        
-app.use("/", authRoutes);        
-// app.use("/", userRoutes);    
-app.use("/", recipesRouter);    
+// Routes
+app.use("/", pageRoutes);
+app.use("/", authRoutes);
+// app.use("/", userRoutes);
 
 app.get("/", (req, res) => {
   console.log(req.session);

@@ -40,3 +40,32 @@ CREATE TABLE comments (
     comment TEXT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE otps (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(user_id) ON DELETE CASCADE,
+    otp_code TEXT NOT NULL,
+    otp_expires TIMESTAMP NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE otp_logs (
+  log_id SERIAL PRIMARY KEY,
+  user_id INTEGER REFERENCES users(user_id) ON DELETE CASCADE,
+  action VARCHAR(20) NOT NULL, -- 'generated', 'resend', 'failed', 'success'
+  ip_address VARCHAR(45),
+  user_agent TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
+--------------------------------------------------------------
+-- OTP failures in the last 24h
+SELECT * FROM otp_logs
+WHERE action = 'failed'
+AND created_at > NOW() - INTERVAL '24 hours';
+
+-- Total OTP sends per user
+SELECT user_id, COUNT(*) FROM otp_logs
+WHERE action IN ('generated', 'resend')
+GROUP BY user_id;

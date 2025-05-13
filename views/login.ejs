@@ -22,11 +22,15 @@
         
         <!-- Email -->
         <div class="auth-items">
-            <label for="email">
-                Email
-            </label>
-            <input type="email" name="email" id="email" placeholder="email" required>
+            <label for="email">Email</label>
+            <input type="email" name="email" id="email" placeholder="email" required 
+                value="<%= email ? email : '' %>" 
+                <%= step === 'otp' ? 'readonly' : '' %> 
+            >
         </div>
+
+
+
 
         <!-- Password -->
          <% if (!step || step === "credentials") { %>
@@ -45,6 +49,7 @@
             <div class="auth-items">
                 <label for="otp">One-Time Password (OTP)</label>
                 <input type="text" name="otp" id="otp" placeholder="Enter OTP" required>
+                <button type="submit" class="btn small" name="resend" value="true">Resend OTP</button>
             </div>
             <% } else { %>
                 <input type="hidden" name="step" value="credentials">

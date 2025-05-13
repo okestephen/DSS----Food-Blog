@@ -1,13 +1,13 @@
 import express from "express";
 import { db } from "../db/connect.js";
 import {cleanup, validateSignupInput, delay, isValidPassword, passwordRequirementsMessage } from "../utils/validation.js";
+import bcrypt from "bcrypt";
 import nodemailer from "nodemailer";
 import crypto from "crypto";
 import slugify from "slugify";
-
-// Pwned password check integration
 import { isPwned } from "../utils/checkPwnedPassword.js";
 import { hashPassword, verifyPassword } from "../utils/crypto.js";
+import { logOtpAction } from "../utils/logOtpAction.js";
 
 const router = express.Router();
 
@@ -15,170 +15,228 @@ const router = express.Router();
 const OBSERVATION_WINDOW_MS = 10 * 60 * 1000;  // 10 minutes
 const LOCKOUT_THRESHOLD = 3;
 const MAX_ATTEMPTS = 6;  // Beyond this = permanent lock
-const SALT = 10
 
 // Render login page
 router.get("/login", (req, res) => {
     const timeout = req.query.timeout;
-    res.render("login.ejs", {error: null, timeout, step: "credentials"});
+    res.render("login.ejs", {error: null, timeout, step: "credentials", email: null});
 });
   
 // Handle login submission
 router.post("/login", async (req, res) => {
-    let { email, password, otp, step } = req.body;
-    try {
-        if (step === "otp") {
-        // Step 2: OTP Verification
-        const userResult = await db.query("SELECT * FROM users WHERE email = $1", [email]);
-        if (userResult.rows.length === 0) {
-            return res.render("login.ejs", {
-            error: "Invalid session.",
-            step: "credentials",
-            email
-            });
-        }
+  let { email, password, otp, step, resend } = req.body;
 
-        const user = userResult.rows[0];
+  try {
+    await db.query("DELETE FROM otps WHERE otp_expires < NOW()"); // Clean up expired OTPs
 
-        const otpResult = await db.query(
-            "SELECT * FROM otps WHERE user_id = $1 AND otp_code = $2 AND otp_expires > NOW() ORDER BY created_at DESC LIMIT 1",
-            [user.user_id, otp]
-        );
-
-        if (otpResult.rows.length === 0) {
-            return res.render("login.ejs", {
-            error: "Invalid or expired OTP.",
-            step: "otp",
-            email
-            });
-        }
-
-        // Clean up OTP
-        await db.query("DELETE FROM otps WHERE user_id = $1", [user.user_id]);
-
-        // Start session
-        req.session.regenerate(err => {
-            if (err) throw err;
-
-            req.session.user = {
-            id: user.user_id,
-            email: user.email,
-            slug: user.slug
-            };
-            req.session.ua = req.get("User-Agent");
-            req.session.ip = req.ip;
-
-            res.redirect(`/profile/${user.slug}`);
+    if (step === "otp") {
+      const userResult = await db.query("SELECT * FROM users WHERE email = $1", [email]);
+      if (userResult.rows.length === 0) {
+        return res.render("login.ejs", {
+          error: "Invalid session.",
+          step: "credentials",
+          email
         });
-        return;
-    }
-        email = email.trim();
-        password = password.trim();
+      }
 
-        if (!email || !password) {
-            await delay(500);
-            throw Error("Email and password are required.");
-        }
+      const user = userResult.rows[0];
 
-        const result = await db.query(
-            "SELECT * FROM users WHERE email = $1",
-            [email]
-        );
-        if (result.rows.length === 0) {
-            await delay(500);
-            throw new Error("Login failed; Invalid email or password.");
-        }
-
-        const user = result.rows[0];
-
-        if (user.is_locked) {
-            const now = new Date();
-            const lastFailed = new Date(user.last_failed || 0);
-            const elapsed = now - lastFailed;
-
-            if (user.failed_attempts >= MAX_ATTEMPTS) {
-               throw new Error("Account is permanently locked. Please reset your password.");
-            }
-
-            // Within the observation window
-            if (elapsed <= OBSERVATION_WINDOW_MS) {
-               if (user.failed_attempts >= LOCKOUT_THRESHOLD) {
-                  const exponentialDelay = Math.pow(2, user.failed_attempts - LOCKOUT_THRESHOLD) * 1000; // in ms
-                  if (elapsed < exponentialDelay) {
-                    const remaining = Math.ceil((exponentialDelay - elapsed) / 1000);
-                    throw new Error(`Too many attempts. Try again in ${remaining} seconds.`);
-                  }
-                }
-            } else {
-               // Reset counter after window expires
-               user.failed_attempts = 0;
-            }
-        }
-
-        const validPassword = await verifyPassword(password, user.password);
-        if (!validPassword) {
-            const updatedAttempts = user.failed_attempts + 1;
-            const shouldLock = updatedAttempts >= MAX_ATTEMPTS;
-
-            await db.query(
-              "UPDATE users SET failed_attempts = $1, is_locked = $2, last_failed = NOW() WHERE email = $3",
-              [updatedAttempts, shouldLock, email]
-            );
-
-            throw new Error(
-              shouldLock
-              ? "Account permanently locked. Please use 'Forgot Password' to reset access."
-              : "Login failed; Invalid email or password."
-            );
-
-        }
-
-        // Reset failed attempts ont successful login
-        await db.query(
-          "UPDATE users SET failed_attempts = 0, is_locked = false, last_failed = NULL WHERE email = $1",
-           [email]
+      if (resend === "true") {
+        // Rate-limit resend
+        const recentOtp = await db.query(
+          "SELECT created_at FROM otps WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1",
+          [user.user_id]
         );
 
+        if (recentOtp.rows.length > 0) {
+          const lastSent = new Date(recentOtp.rows[0].created_at);
+          const secondsSinceLast = (Date.now() - lastSent.getTime()) / 1000;
+          if (secondsSinceLast < 60) {
+            return res.render("login.ejs", {
+              email,
+              step: "otp",
+              error: `Please wait ${Math.ceil(60 - secondsSinceLast)} seconds before resending.`
+            });
+          }
+        }
 
-        // Create One-Time Password
         const otpCode = crypto.randomInt(100000, 999999).toString();
-        const expiry = new Date(Date.now() + 5 * 60 * 1000); // 5 min expiry
+        const expiry = new Date(Date.now() + 5 * 60 * 1000);
+
+        const hashedOtp = await bcrypt.hash(otpCode, 10);
 
         await db.query(
-            "INSERT INTO otps (user_id, otp_code, otp_expires) VALUES ($1, $2, $3)",
-            [user.user_id, otpCode, expiry]
+          "INSERT INTO otps (user_id, otp_code, otp_expires) VALUES ($1, $2, $3)",
+          [user.user_id, hashedOtp, expiry]
         );
-        
-        // Send OTP via email
+
+        await logOtpAction(db, user.user_id, "resend", req);
+
         const transporter = nodemailer.createTransport({
-            service: "Gmail",
-            auth: {
+          service: "Gmail",
+          auth: {
             user: process.env.EMAIL_USER,
             pass: process.env.EMAIL_PASS
-            },
+          }
         });
-    
+
         await transporter.sendMail({
-            to: email,
-            subject: "Your One-Time Password (OTP)",
-            html: `<p>Your OTP is: <strong>${otpCode}</strong>. It expires in 5 minutes.</p>`,
+          to: email,
+          subject: "Your New One-Time Password (OTP)",
+          html: `<p>Your new OTP is: <strong>${otpCode}</strong>. It expires in 5 minutes.</p>`
         });
 
-        // Render same login page with OTP input
         return res.render("login.ejs", {
-            step: "otp",
-            email,
-            error: null
+          email,
+          step: "otp",
+          message: "New OTP sent. Please check your email."
         });
+      }
 
-    } catch (error) {
-        console.error("Login error: ", error);
-        res.render("login.ejs", {
-            error: error.message,
-            step: step === "otp" ? "otp" : "credentials",
+      // Verify OTP
+      const otpResult = await db.query(
+        "SELECT * FROM otps WHERE user_id = $1 AND otp_expires > NOW() ORDER BY created_at DESC LIMIT 1",
+        [user.user_id]
+      );
+
+      if (otpResult.rows.length === 0){
+        await logOtpAction(db, user.user_id, "failed", req);
+        return res.render("login.ejs", {
+            error: "Invalid or expired OTP",
+            step: "otp",
             email
         });
+      }
+
+      const isOtpValid = await bcrypt.compare(otp, otpResult.rows[0].otp_code);
+      if (!isOtpValid) {
+        await logOtpAction(db, user.user_id, "failed", req);
+        return res.render("login.ejs", {
+          error: "Invalid or expired OTP.",
+          step: "otp",
+          email
+        });
+      }
+
+      await logOtpAction(db, user.user_id, "success", req);
+
+      // Clean up OTP
+      await db.query("DELETE FROM otps WHERE user_id = $1", [user.user_id]);
+
+      // Create session
+      req.session.regenerate(err => {
+        if (err) throw err;
+        req.session.user = {
+          id: user.user_id,
+          email: user.email,
+          slug: user.slug
+        };
+        req.session.ua = req.get("User-Agent");
+        req.session.ip = req.ip;
+        res.redirect(`/profile/${user.slug}`);
+      });
+
+      return;
     }
+
+    // Step 1: Check email and password
+    email = email.trim();
+    password = password.trim();
+
+    if (!email || !password) {
+      await delay(500);
+      throw new Error("Email and password are required.");
+    }
+
+    const result = await db.query("SELECT * FROM users WHERE email = $1", [email]);
+    if (result.rows.length === 0) {
+      await delay(500);
+      throw new Error("Login failed; Invalid email or password.");
+    }
+
+    const user = result.rows[0];
+
+    // Account lockout checks
+    if (user.is_locked) {
+      const now = new Date();
+      const lastFailed = new Date(user.last_failed || 0);
+      const elapsed = now - lastFailed;
+
+      if (user.failed_attempts >= MAX_ATTEMPTS) {
+        throw new Error("Login attempt has been permanently locked. Please reset your password.");
+      }
+
+      if (elapsed <= OBSERVATION_WINDOW_MS && user.failed_attempts >= LOCKOUT_THRESHOLD) {
+        const delayTime = Math.pow(2, user.failed_attempts - LOCKOUT_THRESHOLD) * 1000;
+        if (elapsed < delayTime) {
+          const remaining = Math.ceil((delayTime - elapsed) / 1000);
+          throw new Error(`Too many attempts. Try again in ${remaining} seconds.`);
+        }
+      } else {
+        await db.query("UPDATE users SET failed_attempts = 0 WHERE email = $1", [email]);
+      }
+    }
+
+    const validPassword = await verifyPassword(password, user.password);
+    if (!validPassword) {
+      const updatedAttempts = user.failed_attempts + 1;
+      const shouldLock = updatedAttempts >= MAX_ATTEMPTS;
+
+      await db.query(
+        "UPDATE users SET failed_attempts = $1, is_locked = $2, last_failed = NOW() WHERE email = $3",
+        [updatedAttempts, shouldLock, email]
+      );
+
+      throw new Error(
+        shouldLock
+          ? "Account permanently locked. Please user 'Forgot Password' to reset access." 
+          : "Login failed; Invalid email or password."
+      );
+    }
+
+    await db.query(
+      "UPDATE users SET failed_attempts = 0, is_locked = false, last_failed = NULL WHERE email = $1",
+      [email]
+    );
+
+    // Generate and Send OTP
+    const otpCode = crypto.randomInt(100000, 999999).toString();
+    const expiry = new Date(Date.now() + 5 * 60 * 1000);  // 5 min Expiry
+
+    await db.query(
+      "INSERT INTO otps (user_id, otp_code, otp_expires) VALUES ($1, $2, $3)",
+      [user.user_id, otpCode, expiry]
+    );
+
+    await logOtpAction(db, user.user_id, "generated", req);
+
+    const transporter = nodemailer.createTransport({
+      service: "Gmail",
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+      }
+    });
+
+    await transporter.sendMail({
+      to: email,
+      subject: "Your One-Time Password (OTP)",
+      html: `<p>Your OTP is: <strong>${otpCode}</strong>. It expires in 5 minutes.</p>`
+    });
+
+    return res.render("login.ejs", {
+      step: "otp",
+      email,
+      error: null
+    });
+  } catch (error) {
+    console.error("Login error: ", error);
+    res.render("login.ejs", {
+      error: error.message,
+      step: step === "otp" ? "otp" : "credentials",
+      email
+    });
+  }
 });
 
 // Render sign up page

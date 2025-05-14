@@ -44,6 +44,12 @@ header li, header a, header button {
     
 }
 
+#welcome{
+    margin-right: auto;
+    color: rgb(var(--secondary));
+    font-weight: bold;
+}
+
 .nav__links {
     list-style: none;
 }

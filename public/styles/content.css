@@ -12,7 +12,8 @@
     align-content: center;
     justify-content: space-around;
     align-items: center;
-    background-color: rgb(var(--primary));
+    /* background-color: rgb(var(--primary)); */
+    background-image: url("/public/images/tipos-de-paella-1.jpg");
 }
 
 .hero-section img {

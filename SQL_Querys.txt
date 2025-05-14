@@ -9,7 +9,7 @@ CREATE TABLE users (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     failed_attempts INTEGER DEFAULT 0,
     is_locked BOOLEAN DEFAULT FALSE,
-    last_failed TIMESTAMP
+    last_failed TIMESTAMP,
     reset_token VARCHAR(255),
     reset_token_expiry TIMESTAMP
 );
@@ -30,7 +30,7 @@ CREATE TABLE recipes (
     extra_images TEXT[],
     video_url TEXT,
     allow_comments BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 );
 
 CREATE TABLE comments (

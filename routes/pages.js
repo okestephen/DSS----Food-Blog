@@ -15,9 +15,25 @@ const upload = multer({ storage });
 
 const router = express.Router();
 
-router.get("/", (req, res) => {
-    res.render("index.ejs");
+router.get("/", async (req, res) => {
+  try {
+    const getRecipes = await db.query(
+      `SELECT recipe_id, slug, title, description, main_image
+        FROM recipes
+        WHERE main_image IS NOT NULL
+        ORDER BY created_at DESC
+        LIMIT 5;
+      `
+    );
+    const featuredRecipes = getRecipes.rows;
+
+    res.render("index.ejs", { featuredRecipes });
+  } catch (err) {
+    console.error("Error fetching featured recipes:", err);
+    res.render("index.ejs", { featuredRecipes: [] });
+  }
 });
+
 
 router.get("/submit", (req, res) => {
     res.render("submit.ejs", { editing: false, recipe: {} });
@@ -111,7 +127,14 @@ router.get("/recipe/:id/edit", ensureAuthenticated, async (req, res) => {
 router.post("/recipe/:id/edit", ensureAuthenticated, upload.fields([
   { name: "main_image", maxCount: 1 },
   { name: "extra_images", maxCount: 10 }
+  
 ]), async (req, res) => {
+    const result = await db.query("SELECT * FROM recipes WHERE recipe_id = $1", [req.params.id]);
+    const recipe = result.rows[0];
+
+    if (!recipe || recipe.user_id !== req.session.user.id) {
+      return res.status(403).send("Not authorized to edit this recipe");
+    }
   try {
     const {
       title,
@@ -199,6 +222,12 @@ router.post("/recipe/:id/edit", ensureAuthenticated, upload.fields([
 
 router.post("/recipe/:id/delete", ensureAuthenticated, async (req, res) => {
   try {
+    const result = await db.query("SELECT * FROM recipes WHERE recipe_id = $1", [req.params.id]);
+    const recipe = result.rows[0];
+
+    if (!recipe || recipe.user_id !== req.session.user.id) {
+      return res.status(403).send("Not authorized to edit this recipe");
+    }
     await db.query("DELETE FROM recipes WHERE recipe_id = $1 AND user_id = $2", [
       req.params.id,
       req.session.user.id

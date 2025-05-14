@@ -90,14 +90,6 @@ router.post("/login", async (req, res) => {
 
         await logOtpAction(db, user.user_id, "resend", req);
 
-        const transporter = nodemailer.createTransport({
-          service: "Gmail",
-          auth: {
-            user: process.env.EMAIL_USER,
-            pass: process.env.EMAIL_PASS
-          }
-        });
-
         await sendOtpEmail(user.decrypted.email, user.decrypted.firstname, otpCode);
 
 
@@ -257,14 +249,6 @@ router.post("/login", async (req, res) => {
     );
 
     await logOtpAction(db, user.user_id, "generated", req);
-
-    const transporter = nodemailer.createTransport({
-      service: "Gmail",
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-      }
-    });
 
     await sendOtpEmail(user.decrypted.email, user.decrypted.firstname, otpCode);
 
@@ -433,16 +417,6 @@ router.post("/forgot-password", async (req, res) => {
 
         // Send email
         const resetLink = `http://localhost:3000/reset-password/${token}`;
-
-        // Setyp transport
-        const transporter = nodemailer.createTransport({
-            service: "Gmail",
-            auth: {
-                user: process.env.EMAIL_USER,
-                pass: process.env.EMAIL_PASS
-            },
-        });
-        
         await sendPasswordResetEmail(user.decrypted.email, user.decrypted.firstname, resetLink);
         
         res.render("forgot-password.ejs", { 

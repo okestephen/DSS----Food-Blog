@@ -1,19 +1,17 @@
-// Required Modules
-import express, { response } from "express";
-import path, {dirname} from "path";
+// ------------------- Required Modules -------------------
+import express from "express";
+import path, { dirname } from "path";
 import { fileURLToPath } from "url";
 import { connectDB, db } from "./db/connect.js";
 import bodyParser from "body-parser";
 import "dotenv/config";
-import cookieParser from "cookie-parser";
 import session from "express-session";
 import pgSession from "connect-pg-simple";
 import authRoutes from "./routes/auth.js";
 import pageRoutes from "./routes/pages.js";
 import { idleTimout } from "./middleware/idleTimeout.js";
-
-// ---------------------------------------------------------
-import fs from "fs";
+import fs from "fs"; 
+import helmet from "helmet";
 // ---------------------------------------------------------
 
 
@@ -26,6 +24,8 @@ const PgSession = pgSession(session);
 app.set("view engine", "ejs");
 app.use(bodyParser.urlencoded({ extended: true}));
 app.use(express.static("public"))
+app.use(helmet.frameguard({ action: "deny" })); // Prevent clickjacking
+
 
 // ------------------------------------------------------------
 const uploadDir = path.join(__dirname, "public", "uploads");
@@ -40,7 +40,7 @@ connectDB();
 // Session configuration
 app.use(
   session({
-    store: new PgSession({   // Persist sessions seucrely on backend
+    store: new PgSession({   // Persist sessions securely on backend
       pool: db,
       tableName: "session",
       createTableIfMissing: true

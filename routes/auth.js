@@ -1,13 +1,15 @@
 import express from "express";
+import "dotenv/config";
 import { db } from "../db/connect.js";
 import {cleanup, validateSignupInput, delay, isValidPassword, passwordRequirementsMessage } from "../utils/validation.js";
 import bcrypt from "bcrypt";
-import nodemailer from "nodemailer";
 import crypto from "crypto";
 import slugify from "slugify";
 import { isPwned } from "../utils/checkPwnedPassword.js";
-import { hashPassword, verifyPassword } from "../utils/crypto.js";
+import { encryptInfo, encrypt, decryptInfo, hashPassword, verifyPassword } from "../utils/crypto.js";
 import { logOtpAction } from "../utils/logOtpAction.js";
+import { sendPasswordResetEmail, sendOtpEmail } from "../utils/mailerService.js";
+
 
 const router = express.Router();
 
@@ -15,6 +17,11 @@ const router = express.Router();
 const OBSERVATION_WINDOW_MS = 10 * 60 * 1000;  // 10 minutes
 const LOCKOUT_THRESHOLD = 3;
 const MAX_ATTEMPTS = 6;  // Beyond this = permanent lock
+
+if (!process.env.ENCRYPTION_KEY) {
+  throw new Error("Missing ENCRYPTION_KEY in environment variables.");
+}
+const encryptionKey = Buffer.from(process.env.ENCRYPTION_KEY, "hex");
 
 // Render login page
 router.get("/login", (req, res) => {
@@ -30,16 +37,27 @@ router.post("/login", async (req, res) => {
     await db.query("DELETE FROM otps WHERE otp_expires < NOW()"); // Clean up expired OTPs
 
     if (step === "otp") {
-      const userResult = await db.query("SELECT * FROM users WHERE email = $1", [email]);
-      if (userResult.rows.length === 0) {
+      const pendingUser = req.session.pendingUser;
+
+      if(!pendingUser){
         return res.render("login.ejs", {
-          error: "Invalid session.",
+          error: "Invalid OTP or session expired.",
           step: "credentials",
           email
         });
       }
 
-      const user = userResult.rows[0];
+      const result = await db.query("SELECT * FROM users WHERE user_id = $1", [pendingUser.id]);
+
+      if (result.rows.length === 0){
+        return res.render("login.ejs", {
+          error: "Invalid OTP or session expired.",
+          step: "credentials",
+          email
+        });
+      }
+
+      const user = {...result.rows[0], decrypted: pendingUser.decrypted};
 
       if (resend === "true") {
         // Rate-limit resend
@@ -80,11 +98,9 @@ router.post("/login", async (req, res) => {
           }
         });
 
-        await transporter.sendMail({
-          to: email,
-          subject: "Your New One-Time Password (OTP)",
-          html: `<p>Your new OTP is: <strong>${otpCode}</strong>. It expires in 5 minutes.</p>`
-        });
+        await sendOtpEmail(user.decrypted.email, user.decrypted.firstname, otpCode);
+
+
 
         return res.render("login.ejs", {
           email,
@@ -101,8 +117,9 @@ router.post("/login", async (req, res) => {
 
       if (otpResult.rows.length === 0){
         await logOtpAction(db, user.user_id, "failed", req);
+        await delay(500);
         return res.render("login.ejs", {
-            error: "Invalid or expired OTP",
+            error: "Invalid OTP or session expired.",
             step: "otp",
             email
         });
@@ -111,8 +128,9 @@ router.post("/login", async (req, res) => {
       const isOtpValid = await bcrypt.compare(otp, otpResult.rows[0].otp_code);
       if (!isOtpValid) {
         await logOtpAction(db, user.user_id, "failed", req);
+        await delay(500);
         return res.render("login.ejs", {
-          error: "Invalid or expired OTP.",
+          error: "Invalid OTP or session expired.", 
           step: "otp",
           email
         });
@@ -124,37 +142,58 @@ router.post("/login", async (req, res) => {
       await db.query("DELETE FROM otps WHERE user_id = $1", [user.user_id]);
 
       // Create session
-      req.session.regenerate(err => {
+      return req.session.regenerate(err => {
         if (err) throw err;
         req.session.user = {
           id: user.user_id,
-          email: user.email,
-          slug: user.slug
+          email: user.decrypted.email,
+          slug: user.slug,
+          firstname: user.decrypted.firstname,
+          lastname: user.decrypted.lastname
         };
         req.session.ua = req.get("User-Agent");
-        req.session.ip = req.ip;
+        req.session.ip = req.ip; 
+        delete req.session.pendingUser;  // Clear pending state
         res.redirect(`/profile/${user.slug}`);
       });
-
-      return;
     }
 
     // Step 1: Check email and password
-    email = email.trim();
-    password = password.trim();
+    // password = password.trim();
 
     if (!email || !password) {
       await delay(500);
       throw new Error("Email and password are required.");
     }
 
-    const result = await db.query("SELECT * FROM users WHERE email = $1", [email]);
-    if (result.rows.length === 0) {
-      await delay(500);
-      throw new Error("Login failed; Invalid email or password.");
+    const allUsers = await db.query("SELECT * FROM users"); // We need to decrypt each one to match email
+
+    let matchedUser = null;
+    for (const row of allUsers.rows) {
+        try {
+            const decrypted = decryptInfo({
+                firstname: row.first_name,
+                lastname: row.last_name,
+                email: row.email,
+                phone: row.phone
+            }, encryptionKey);
+
+            if (decrypted.email == email.trim()) {
+                matchedUser = { ...row, decrypted };
+                console.log(matchedUser);
+                break;
+            }
+        } catch (err) {
+            console.error("Decryption failed for user row:", err.message);
+        }
     }
 
-    const user = result.rows[0];
+    if (!matchedUser) {
+        await delay(500);
+        throw new Error("Login failed; Invalid email or password.");
+    }
+
+    const user = matchedUser;
 
     // Account lockout checks
     if (user.is_locked) {
@@ -173,18 +212,18 @@ router.post("/login", async (req, res) => {
           throw new Error(`Too many attempts. Try again in ${remaining} seconds.`);
         }
       } else {
-        await db.query("UPDATE users SET failed_attempts = 0 WHERE email = $1", [email]);
+        await db.query("UPDATE users SET failed_attempts = 0 WHERE user_id = $1", [user.user_id]);
       }
     }
 
-    const validPassword = await verifyPassword(password, user.password);
+    const validPassword = await verifyPassword(password.trim(), user.password);
     if (!validPassword) {
       const updatedAttempts = user.failed_attempts + 1;
       const shouldLock = updatedAttempts >= MAX_ATTEMPTS;
 
       await db.query(
-        "UPDATE users SET failed_attempts = $1, is_locked = $2, last_failed = NOW() WHERE email = $3",
-        [updatedAttempts, shouldLock, email]
+        "UPDATE users SET failed_attempts = $1, is_locked = $2, last_failed = NOW() WHERE user_id = $3",
+        [updatedAttempts, shouldLock, user.user_id]
       );
 
       throw new Error(
@@ -195,9 +234,16 @@ router.post("/login", async (req, res) => {
     }
 
     await db.query(
-      "UPDATE users SET failed_attempts = 0, is_locked = false, last_failed = NULL WHERE email = $1",
-      [email]
+      "UPDATE users SET failed_attempts = 0, is_locked = false, last_failed = NULL WHERE user_id = $1",
+      [user.user_id]
     );
+
+    // Store pending user info for OTP step
+    req.session.pendingUser = {
+      id: user.user_id,
+      slug: user.slug,
+      decrypted: user.decrypted
+    }
 
     // Generate and Send OTP
     const otpCode = crypto.randomInt(100000, 999999).toString();
@@ -220,11 +266,7 @@ router.post("/login", async (req, res) => {
       }
     });
 
-    await transporter.sendMail({
-      to: email,
-      subject: "Your One-Time Password (OTP)",
-      html: `<p>Your OTP is: <strong>${otpCode}</strong>. It expires in 5 minutes.</p>`
-    });
+    await sendOtpEmail(user.decrypted.email, user.decrypted.firstname, otpCode);
 
     return res.render("login.ejs", {
       step: "otp",
@@ -286,34 +328,33 @@ router.post("/signup", async (req, res) => {
         // Hash password
         const hashedPassword = await hashPassword(password);
 
+        // Generate Slug
+        const baseSlug = slugify(`${fname}-${lname}`, { lower: true });
+        const uniqueSlug = `${baseSlug}-${Date.now()}`;
+
+        // Get encryption key
+        const encrypted = encryptInfo(fname, lname, email, phone, encryptionKey);
+
+
         // Insert user into database
         const registerUser = await db.query(
-            "INSERT INTO users(first_name, last_name, password, email, phone) VALUES($1, $2, $3, $4, $5) RETURNING *",
-            [fname, lname, hashedPassword, email, phone]
+            "INSERT INTO users(first_name, last_name, password, email, phone, slug) VALUES($1, $2, $3, $4, $5, $6) RETURNING *",
+            [encrypted.firstname, encrypted.lastname, hashedPassword, encrypted.email, encrypted.phone, uniqueSlug]
         );
 
-        const newEntry = registerUser.rows[0]
-        
-        const slug = slugify(`${newEntry.first_name}-${newEntry.last_name}-${newEntry.user_id}`, {lower: true});
 
-        const addSlug = await db.query(
-            "UPDATE users SET slug = $1 WHERE user_id = $2 RETURNING *",
-            [slug, newEntry.user_id]
-        );
-
-        const user = addSlug.rows[0]
-        // console.log(user);
+        const user = registerUser.rows[0]
 
         console.log(`User created with slug: ${user.slug}`);
-        console.log("Welcome", user.first_name, user.last_name)
+        console.log("Welcome", user.decrypted.firstname, user.decrypted.lastname)
 
         // TODO: Create a session or token here
-        req.session.regenerate(err => {   // Stop session fixation
+        return req.session.regenerate(err => {   // Stop session fixation
             if (err) throw err;
 
             req.session.user = {
                 id: user.user_id,
-                email: user.email,
+                email: user.decrypted.email,
                 slug: user.slug,
             };
 
@@ -353,18 +394,41 @@ router.get("/forgot-password", (req, res) => {
 router.post("/forgot-password", async (req, res) => {
     const {email} = req.body;
     try {
-        const userResult = await db.query("SELECT * FROM users WHERE email = $1", [email]);
-        if (userResult.rows.length === 0) {
-            return res.render("forgot-password.ejs", { error: null, message: "If that email address is in our database, we will send you an email to reset your password."
-           });
+        const allUsers = await db.query("SELECT * FROM users");
+        let matchedUser = null;
+
+        for (const row of allUsers.rows) {
+          try {
+            const decrypted = decryptInfo({
+              firstname: row.first_name,
+              lastname: row.last_name,
+              email: row.email,
+              phone: row.phone
+            }, Buffer.from(process.env.ENCRYPTION_KEY, "hex"));
+
+            if (decrypted.email === email.trim()) {
+              matchedUser = { ...row, decrypted };
+              break;
+            }
+          } catch (err) {
+            console.error("Decrytion error for a user:", err.message);
+          }
         }
 
+        if (!matchedUser){
+          return res.render("forgot-password.ejs", {
+            error: null,
+            message: "If that email address is in our database, we will send you an email to reset your password."
+          });
+        }
+
+        const user = matchedUser;
         const token = crypto.randomBytes(32).toString("hex");
         const expiry = new Date(Date.now() + (1000 * 60 * 60)); 
 
         await db.query(
-            "UPDATE users SET reset_token = $1, reset_token_expiry = $2 WHERE email = $3",
-            [token, expiry, email]
+            "UPDATE users SET reset_token = $1, reset_token_expiry = $2 WHERE user_id = $3",
+            [token, expiry, user.user_id]
         );
 
         // Send email
@@ -379,24 +443,19 @@ router.post("/forgot-password", async (req, res) => {
             },
         });
         
-        try {
-            await transporter.sendMail({
-               to: email,
-               subject: "Password Reset",
-               html: `<p>Click <a href="${resetLink}">here</a> to reset your password.</p>`,
-            });
-        } catch (err) {
-            console.error("Email send error:", err.response?.data || err.message);
-            throw new Error("Failed to send reset email.");
-        }
+        await sendPasswordResetEmail(user.decrypted.email, user.decrypted.firstname, resetLink);
         
+        res.render("forgot-password.ejs", { 
+          error: null,
+          message: "If that email address is in our database, we will send you an email to reset your password."
+        });
 
-
-        res.render("forgot-password.ejs", { error: null, message: "If that email address is in our database, we will send you an email to reset your password."
-});
     } catch (err) {
         console.error("Forgot password error: ", err);
-        res.render("forgot-password.ejs", {error: "Something went wrong", message: null});
+        res.render("forgot-password.ejs", {
+          error: "Something went wrong",
+          message: null
+        });
     }
 });
 
@@ -411,7 +470,22 @@ router.get("/reset-password/:token", async (req, res) => {
         return res.send("Invalid or expired token");
     }
 
-    res.render("reset-password.ejs", { token, error: null});
+    const user = result.rows[0];
+    let firstname = null;
+
+    try {
+      const decrypted = decryptInfo({
+        firstname: user.first_name,
+        lastname: user.last_name,
+        email: user.email,
+        phone: user.phone
+      }, Buffer.from(process.env.ENCRYPTION_KEY, 'hex'));
+      firstname = decrypted.firstname;
+    } catch (err) {
+      console.error("Decryption error:", err.message);
+    }
+
+  res.render("reset-password.ejs", { token, error: null, firstname });   
 });
 
 router.post("/reset-password/:token", async (req, res) => {

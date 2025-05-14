@@ -4,6 +4,13 @@ import { validateSessionIntegrity } from "../middleware/sessionIntegrity.js";
 import { db } from "../db/connect.js";
 import multer from "multer";
 import path from "path";
+import { decryptInfo } from "../utils/crypto.js";
+import { escapeHTML } from "../utils/sanitize.js"; // Manual XSS mitigation
+
+if (!process.env.ENCRYPTION_KEY) {
+  throw new Error("Missing ENCRYPTION_KEY in environment variables.");
+}
+const encryptionKey = Buffer.from(process.env.ENCRYPTION_KEY, "hex");
 
 // File storage config
 const storage = multer.diskStorage({
@@ -44,47 +51,41 @@ router.post("/submit-recipe", ensureAuthenticated, upload.fields([
   { name: "extra_images", maxCount: 10 }
 ]), async (req, res) => {
   try {
-    // Extract form fields from req.body
     const { title, description, prep_time, cook_time, servings, ingredients, steps, tags, video, allow_comments } = req.body;
-    const ingredientsArray = Array.isArray(ingredients) ? ingredients : [ingredients];
-    const stepsArray = Array.isArray(steps) ? steps : [steps];
-    const tagArray = Array.isArray(tags) ? tags : [tags];
+    const ingredientsArray = (Array.isArray(ingredients) ? ingredients : [ingredients]).map(escapeHTML);
+    const stepsArray = (Array.isArray(steps) ? steps : [steps]).map(escapeHTML);
+    const tagArray = (Array.isArray(tags) ? tags : [tags]).map(escapeHTML);
+    const cleanTitle = escapeHTML(title);
+    const cleanDescription = escapeHTML(description);
+    const cleanVideo = video ? escapeHTML(video) : "";
     const allowComments = allow_comments === "on";
+    const mainImageName = req.files.main_image[0].filename;
+    const extraImagesNames = (req.files.extra_images || []).map(f => f.filename);
 
-    // Extract uploaded file info from req.files
-    const mainImageFile = req.files.main_image[0];             // single main image file
-    const mainImageName = mainImageFile.filename;              // e.g., "recipe_1634567890123_myphoto.jpg"
-    const extraImagesFiles = req.files.extra_images || [];     // array of additional image files (if any)
-    const extraImagesNames = extraImagesFiles.map(f => f.filename);  // array of filenames for extra images
-
-    // Insert new recipe into the database, including the extra_images array
-    const insertQuery = `
+    await db.query(`
       INSERT INTO recipes 
-        (user_id, title, description, ingredients, steps, prep_time, cook_time, servings, tags, main_image, extra_images, video_url, allow_comments, created_at)
-      VALUES 
-        ($1,     $2,    $3,          $4,          $5,    $6,        $7,        $8,       $9,   $10,        $11,         $12,      $13,           NOW());
-    `;
-    const values = [
-      req.session.user.id,         // assuming user ID is stored in session
-      title,
-      description,
-      ingredientsArray,
-      stepsArray,
-      parseInt(prep_time),
-      parseInt(cook_time),
-      parseInt(servings),
-      tagArray,
-      mainImageName,
-      extraImagesNames,           // array of text filenames for extra_images
-      video,
-      allowComments
-    ];
-    await db.query(insertQuery, values);
+      (user_id, title, description, ingredients, steps, prep_time, cook_time, servings, tags, main_image, extra_images, video_url, allow_comments, created_at)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,NOW())`,
+      [
+        req.session.user.id,    // Session ID is user_id
+        cleanTitle,
+        cleanDescription,
+        ingredientsArray,
+        stepsArray,
+        parseInt(prep_time),
+        parseInt(cook_time),
+        parseInt(servings),
+        tagArray,
+        mainImageName,
+        extraImagesNames, // Array of images
+        cleanVideo,
+        allowComments
+      ]
+    );
 
     res.redirect("/browse");
   } catch (err) {
     console.error("Recipe submission failed:", err);
-    // Re-render form with error (not shown for brevity)
     res.render("submit.ejs", { recipe: req.body, editing: false, error: "Failed to submit recipe." });
   }
 });
@@ -127,91 +128,64 @@ router.get("/recipe/:id/edit", ensureAuthenticated, async (req, res) => {
 router.post("/recipe/:id/edit", ensureAuthenticated, upload.fields([
   { name: "main_image", maxCount: 1 },
   { name: "extra_images", maxCount: 10 }
-  
 ]), async (req, res) => {
+  try {
     const result = await db.query("SELECT * FROM recipes WHERE recipe_id = $1", [req.params.id]);
     const recipe = result.rows[0];
+    if (!recipe || recipe.user_id !== req.session.user.id) return res.status(403).send("Not authorized");
 
-    if (!recipe || recipe.user_id !== req.session.user.id) {
-      return res.status(403).send("Not authorized to edit this recipe");
-    }
-  try {
     const {
-      title,
-      description,
-      prep_time,
-      cook_time,
-      servings,
-      ingredients,
-      steps,
-      tags,
-      video,
-      allow_comments,
+      title, description, prep_time, cook_time, servings,
+      ingredients, steps, tags, video, allow_comments,
       delete_images = []
     } = req.body;
 
-    const ingredientsArray = Array.isArray(ingredients) ? ingredients : [ingredients];
-    const stepsArray = Array.isArray(steps) ? steps : [steps];
-    const tagArray = Array.isArray(tags) ? tags : [tags];
+    const ingredientsArray = (Array.isArray(ingredients) ? ingredients : [ingredients]).map(escapeHTML);
+    const stepsArray = (Array.isArray(steps) ? steps : [steps]).map(escapeHTML);
+    const tagArray = (Array.isArray(tags) ? tags : [tags]).map(escapeHTML);
+    const cleanTitle = escapeHTML(title);
+    const cleanDescription = escapeHTML(description);
+    const cleanVideo = video ? escapeHTML(video) : "";
     const allowComments = allow_comments === "on";
     const deleteImagesArray = Array.isArray(delete_images) ? delete_images : [delete_images];
 
     let updateQuery = `
       UPDATE recipes SET
-        title = $1,
-        description = $2,
-        ingredients = $3,
-        steps = $4,
-        prep_time = $5,
-        cook_time = $6,
-        servings = $7,
-        tags = $8,
-        video_url = $9,
-        allow_comments = $10`;
-
+      title = $1, description = $2, ingredients = $3, steps = $4,
+      prep_time = $5, cook_time = $6, servings = $7, tags = $8,
+      video_url = $9, allow_comments = $10`;
     const values = [
-      title,
-      description,
+      cleanTitle,
+      cleanDescription,
       ingredientsArray,
       stepsArray,
       parseInt(prep_time),
       parseInt(cook_time),
       parseInt(servings),
       tagArray,
-      video,
+      cleanVideo,
       allowComments
     ];
 
-    // Handle new main image if uploaded
-    if (req.files.main_image && req.files.main_image.length > 0) {
-      const newMainImage = req.files.main_image[0].filename;
-      updateQuery += ", main_image = $" + (values.length + 1);
-      values.push(newMainImage);
+    if (req.files.main_image?.length > 0) {
+      updateQuery += `, main_image = $${values.length + 1}`;
+      values.push(req.files.main_image[0].filename);
     }
 
-    // Handle extra images
-    let result = await db.query("SELECT extra_images FROM recipes WHERE recipe_id = $1", [req.params.id]);
-    let existingImages = result.rows[0]?.extra_images || [];
-
-    // Remove images marked for deletion
-    const filteredImages = existingImages.filter(img => !deleteImagesArray.includes(img));
-
-    // Add any new extra images
-    if (req.files.extra_images && req.files.extra_images.length > 0) {
+    const currentImages = recipe.extra_images || [];
+    const filteredImages = currentImages.filter(img => !deleteImagesArray.includes(img));
+    if (req.files.extra_images?.length > 0) {
       const newImages = req.files.extra_images.map(f => f.filename);
       filteredImages.push(...newImages);
     }
 
-    updateQuery += ", extra_images = $" + (values.length + 1);
+    updateQuery += `, extra_images = $${values.length + 1}`;
     values.push(filteredImages);
-
-    // WHERE clause
-    updateQuery += " WHERE recipe_id = $" + (values.length + 1);
+    updateQuery += ` WHERE recipe_id = $${values.length + 1}`;
     values.push(req.params.id);
 
     await db.query(updateQuery, values);
     res.redirect(`/recipe/${req.params.id}`);
-
   } catch (err) {
     console.error("Error updating recipe:", err);
     res.status(500).send("Error updating recipe");
@@ -288,8 +262,22 @@ router.get("/profile/:slug", ensureAuthenticated, validateSessionIntegrity, asyn
     if (user.user_id !== req.session.user.id){
         res.status(403).send("Access Denied");
     }
+
+    const decrypted = decryptInfo({
+      firstname: user.first_name,
+      lastname: user.last_name,
+      email: user.email,
+      phone: user.phone
+    }, encryptionKey);
     
-    res.render("user-profile.ejs", {user});
+    res.render("user-profile.ejs", {
+      user: {
+      ...user,
+      first_name: decrypted.firstname,
+      last_name: decrypted.lastname,
+      email: decrypted.email,
+      phone: decrypted.phone
+    }});
 });
 
 

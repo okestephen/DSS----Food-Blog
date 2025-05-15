@@ -1,5 +1,19 @@
 <%- include("partials/header.ejs") %>
-<main class="container">
-    
-</main>
+
+<h2><%= user.first_name%> <%= user.last_name%>'s Recipes:</h2>
+<br>
+<div class="results grid">
+  <% if (recipes && recipes.length) { %>
+    <% recipes.forEach(recipe => { %>
+      <div class="card">
+        <a href="/recipe/<%= recipe.recipe_id %>">
+          <img src="/uploads/<%= recipe.main_image %>" alt="<%= recipe.title %>">
+          <h3><%= recipe.title %></h3>
+        </a>
+      </div>
+    <% }) %>
+  <% } else { %>
+    <p>No recipes found.</p>
+  <% } %>
+</div>
 <%- include("partials/footer.ejs") %>

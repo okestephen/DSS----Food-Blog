@@ -172,7 +172,7 @@ router.post("/login", async (req, res) => {
 
             if (decrypted.email == email.trim()) {
                 matchedUser = { ...row, decrypted };
-                console.log(matchedUser);
+  
                 break;
             }
         } catch (err) {
@@ -286,9 +286,6 @@ router.post("/signup", async (req, res) => {
         passwordConf = passwordConf.trim()
         phone = phone && phone.trim() !== "" ? phone.trim() : null;
 
-        // Debug
-        // console.log(`fname: ${fname},\nlname: ${lname},\nemail: ${email},\npassword: ${password},\npasswordConf: ${passwordConf},\nphone: ${phone},\n`);
-
         // Validate Input
         validateSignupInput(fname, lname, email, password, passwordConf, phone)
 
@@ -343,9 +340,6 @@ router.post("/signup", async (req, res) => {
           email: user.email,
           phone: user.phone
         }, encryptionKey);
-
-        // console.log(`User created with slug: ${user.slug}`);
-        console.log("Welcome", decrypted.firstname, decrypted.lastname)
 
         // TODO: Create a session or token here
         return req.session.regenerate(err => {   // Stop session fixation
@@ -511,7 +505,7 @@ router.post("/reset-password/:token", async (req, res) => {
     const hashedPassword = await hashPassword(password);
 
     await db.query(
-        "UPDATE users SET password = $1, reset_token = NULL, reset_token_expiry = NULL WHERE reset_token = $2",
+        "UPDATE users SET password = $1, reset_token = NULL, reset_token_expiry = NULL, failed_attempts=0, is_locked = false, last_failed = NULL WHERE reset_token = $2",
         [hashedPassword, token]
     );
 

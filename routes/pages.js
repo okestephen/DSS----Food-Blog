@@ -335,6 +335,14 @@ router.get("/profile/:slug", ensureAuthenticated, validateSession, async (req, r
       email: user.email,
       phone: user.phone
     }, encryptionKey);
+
+    let recipes = await db.query(`
+      SELECT recipe_id, title, main_image FROM recipes WHERE
+      user_id = $1`,
+      [user.user_id]
+    );
+
+
     
     res.render("user-profile.ejs", {
       user: {
@@ -343,7 +351,8 @@ router.get("/profile/:slug", ensureAuthenticated, validateSession, async (req, r
       last_name: decrypted.lastname,
       email: decrypted.email,
       phone: decrypted.phone
-    }});
+    },
+      recipes: recipes.rows});
 });
 
 

@@ -30,7 +30,7 @@ CREATE TABLE recipes (
     extra_images TEXT[],
     video_url TEXT,
     allow_comments BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE comments (

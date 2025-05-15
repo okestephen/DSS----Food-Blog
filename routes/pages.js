@@ -6,6 +6,7 @@ import multer from "multer";
 import path from "path";
 import { decryptInfo } from "../utils/crypto.js";
 import { escapeHTML } from "../utils/sanitize.js"; // Manual XSS mitigation
+import crypto from "crypto";
 
 if (!process.env.ENCRYPTION_KEY) {
   throw new Error("Missing ENCRYPTION_KEY in environment variables.");
@@ -42,8 +43,10 @@ router.get("/", async (req, res) => {
 });
 
 
-router.get("/submit", (req, res) => {
-    res.render("submit.ejs", { editing: false, recipe: {} });
+router.get("/submit", ensureAuthenticated, (req, res) => {
+  const csrfToken = crypto.randomBytes(32).toString("hex");
+  req.session.csrfToken = csrfToken;
+  res.render("submit.ejs", { csrfToken, editing: false, recipe: {} });
 });
 
 router.post("/submit-recipe", ensureAuthenticated, upload.fields([
@@ -51,10 +54,23 @@ router.post("/submit-recipe", ensureAuthenticated, upload.fields([
   { name: "extra_images", maxCount: 10 }
 ]), async (req, res) => {
   try {
+
+    // CSRF Validation
+    const submittedToken = req.body.csrfToken;
+    const sessionToken = req.session.csrfToken;
+    
+
+    if (!submittedToken || submittedToken !== sessionToken) {
+      return res.status(403).send("Invalid CSRF token.");
+    }
+
     const { title, description, prep_time, cook_time, servings, ingredients, steps, tags, video, allow_comments } = req.body;
     const ingredientsArray = (Array.isArray(ingredients) ? ingredients : [ingredients]).map(escapeHTML);
     const stepsArray = (Array.isArray(steps) ? steps : [steps]).map(escapeHTML);
-    const tagArray = (Array.isArray(tags) ? tags : [tags]).map(escapeHTML);
+    let tagArray = [];
+    if (tags) {
+      tagArray = (Array.isArray(tags) ? tags : [tags]).map(escapeHTML);
+    }
     const cleanTitle = escapeHTML(title);
     const cleanDescription = escapeHTML(description);
     const cleanVideo = video ? escapeHTML(video) : "";
@@ -82,11 +98,22 @@ router.post("/submit-recipe", ensureAuthenticated, upload.fields([
         allowComments
       ]
     );
+    
+    delete req.session.csrfToken;
 
     res.redirect("/browse");
   } catch (err) {
     console.error("Recipe submission failed:", err);
-    res.render("submit.ejs", { recipe: req.body, editing: false, error: "Failed to submit recipe." });
+
+    const csrfToken = crypto.randomBytes(32).toString("hex");
+    req.session.csrfToken = csrfToken;
+
+    res.render("submit.ejs", {
+      recipe: req.body,
+      csrfToken, // repopulate token in form
+      editing: false,
+      error: "Failed to submit recipe."
+    });
   }
 });
 
@@ -102,7 +129,13 @@ router.get("/recipe/:id", async (req, res) => {
     }
 
     const recipe = result.rows[0];
-    res.render("recipe.ejs", { recipe });
+    let csrfToken = null;
+    if (req.session.user && req.session.user.id === recipe.user_id) {
+      csrfToken = crypto.randomBytes(32).toString("hex");
+      req.session.csrfToken = csrfToken;
+    }
+
+    res.render("recipe.ejs", { recipe, csrfToken });
   } catch (err) {
     console.error("Error loading recipe:", err);
     res.status(500).send("Server error");
@@ -118,7 +151,10 @@ router.get("/recipe/:id/edit", ensureAuthenticated, async (req, res) => {
       return res.status(403).send("Not authorized to edit this recipe");
     }
 
-    res.render("submit.ejs", { recipe, editing: true });
+    const csrfToken = crypto.randomBytes(32).toString("hex");
+    req.session.csrfToken = csrfToken;
+
+    res.render("submit.ejs", { recipe, editing: true, csrfToken });
   } catch (err) {
     console.error("Edit GET failed:", err);
     res.status(500).send("Failed to load edit page");
@@ -130,6 +166,15 @@ router.post("/recipe/:id/edit", ensureAuthenticated, upload.fields([
   { name: "extra_images", maxCount: 10 }
 ]), async (req, res) => {
   try {
+
+    // CSRF validation
+    const submittedToken = req.body.csrfToken;
+    const sessionToken = req.session.csrfToken;
+    if (!submittedToken || submittedToken !== sessionToken) {
+      return res.status(403).send("Invalid CSRF token.");
+    }
+    delete req.session.csrfToken; // Only delete after passing validation
+
     const result = await db.query("SELECT * FROM recipes WHERE recipe_id = $1", [req.params.id]);
     const recipe = result.rows[0];
     if (!recipe || recipe.user_id !== req.session.user.id) return res.status(403).send("Not authorized");
@@ -142,7 +187,10 @@ router.post("/recipe/:id/edit", ensureAuthenticated, upload.fields([
 
     const ingredientsArray = (Array.isArray(ingredients) ? ingredients : [ingredients]).map(escapeHTML);
     const stepsArray = (Array.isArray(steps) ? steps : [steps]).map(escapeHTML);
-    const tagArray = (Array.isArray(tags) ? tags : [tags]).map(escapeHTML);
+    let tagArray = [];
+      if (tags) {
+        tagArray = (Array.isArray(tags) ? tags : [tags]).map(escapeHTML);
+      }
     const cleanTitle = escapeHTML(title);
     const cleanDescription = escapeHTML(description);
     const cleanVideo = video ? escapeHTML(video) : "";
@@ -188,13 +236,30 @@ router.post("/recipe/:id/edit", ensureAuthenticated, upload.fields([
     res.redirect(`/recipe/${req.params.id}`);
   } catch (err) {
     console.error("Error updating recipe:", err);
-    res.status(500).send("Error updating recipe");
+    const newToken = crypto.randomBytes(32).toString("hex");
+    req.session.csrfToken = newToken;
+    
+    return res.render("submit.ejs", {
+      recipe: req.body,
+      editing: true,
+      csrfToken: newToken,
+      error: "Error updating recipe"
+    });
   }
 });
 
 
 
 router.post("/recipe/:id/delete", ensureAuthenticated, async (req, res) => {
+
+  const submittedToken = req.body.csrfToken;
+  const sessionToken = req.session.csrfToken;
+  delete req.session.csrfToken;
+
+  if (!submittedToken || submittedToken !== sessionToken) {
+    return res.status(403).send("Invalid CSRF token.");
+  }
+
   try {
     const result = await db.query("SELECT * FROM recipes WHERE recipe_id = $1", [req.params.id]);
     const recipe = result.rows[0];

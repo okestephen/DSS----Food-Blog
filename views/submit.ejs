@@ -6,6 +6,7 @@
   action="<%= editing ? '/recipe/' + recipe.recipe_id + '/edit' : '/submit-recipe' %>"
   method="POST"
   enctype="multipart/form-data">
+  <input type="hidden" name="csrfToken" value="<%= csrfToken %>">
 
   <div class="form-section">
     <label for="title">Recipe Title*</label>
@@ -22,16 +23,17 @@
     <label>Ingredients*</label>
     <div id="ingredientsList" class="dynamic-list">
       <% if (editing && recipe.ingredients?.length) { %>
-        <% recipe.ingredients.forEach(i => { %>
+        <% recipe.ingredients.forEach((i, index) => { %>
           <div class="ingredient-item">
             <input type="text" name="ingredients[]" value="<%= i %>" required>
-            <button type="button" onclick="removeItem(this)">Remove</button>
+            <% if (index > 0) { %>
+              <button type="button" onclick="removeItem(this)">Remove</button>
+            <% } %>
           </div>
-        <% }) %>
+        <% }) %>                      
       <% } else { %>
         <div class="ingredient-item">
           <input type="text" name="ingredients[]" placeholder="e.g., 1 cup flour" required>
-          <button type="button" onclick="removeItem(this)">Remove</button>
         </div>
       <% } %>
     </div>
@@ -43,16 +45,17 @@
     <label>Steps / Instructions*</label>
     <div id="stepsList" class="dynamic-list">
       <% if (editing && recipe.steps?.length) { %>
-        <% recipe.steps.forEach(s => { %>
+        <% recipe.steps.forEach((s, index) => { %>
           <div class="step-item">
             <input type="text" name="steps[]" value="<%= s %>" required>
-            <button type="button" onclick="removeItem(this)">Remove</button>
+            <% if (index > 0) { %>
+              <button type="button" onclick="removeItem(this)">Remove</button>
+            <% } %>
           </div>
         <% }) %>
       <% } else { %>
         <div class="step-item">
           <input type="text" name="steps[]" placeholder="e.g., Mix flour and sugar" required>
-          <button type="button" onclick="removeItem(this)">Remove</button>
         </div>
       <% } %>
     </div>
@@ -83,6 +86,7 @@
       <option value="dessert" <%= recipe?.tags?.includes('dessert') ? 'selected' : '' %>>Dessert</option>
       <option value="breakfast" <%= recipe?.tags?.includes('breakfast') ? 'selected' : '' %>>Breakfast</option>
     </select>
+    <button type="button" onclick="clearTags()">Clear Tags</button>
   </div>
 
   <div class="form-section">
@@ -165,9 +169,23 @@
   }
 
   function removeItem(button) {
-    const container = button.parentElement;
-    container.remove();
+  const list = button.closest(".dynamic-list");
+  const items = list.querySelectorAll("input[name$='[]']");
+  
+  if (items.length <= 1) {
+    alert("You must have at least one item.");
+    return;
   }
+
+  const container = button.parentElement;
+  container.remove();
+}
+function clearTags() {
+  const tagSelect = document.getElementById("tags");
+  for (let option of tagSelect.options) {
+    option.selected = false;
+  }
+}
 </script>
 </main>
 <%- include("partials/footer.ejs") %>

@@ -49,6 +49,7 @@
     <% if (session.user && session.user.id === recipe.user_id) { %>
       <a href="/recipe/<%= recipe.recipe_id %>/edit" class="btn">Edit</a>
       <form action="/recipe/<%= recipe.recipe_id %>/delete" method="POST" style="display:inline;">
+        <input type="hidden" name="csrfToken" value="<%= csrfToken %>">
         <button type="submit" class="btn btn-danger">Delete</button>
       </form>
     <% } %>

@@ -7,7 +7,7 @@
         <h2>Login</h2>
 
         <% if (typeof timeout !== "undefined") { %>
-           <li class="msg error">Session expired due to inactivity.</li>
+           <p class="msg error">Session expired due to inactivity.</p>
         <% } %>
 
         <% if(locals.error) { %>
@@ -62,7 +62,7 @@
             <button type="submit" name="register-btn" class="btn btn-big">Log In</button>
         </div>
 
-        <p><a class="register" href="/signup">Don't Have an account? Signup</a></p>
+        <p><a class="register" href="/signup">Don't Have an account? Login</a></p>
     </form>
 </div>
 <div class="right"></div>

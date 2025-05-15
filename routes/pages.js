@@ -42,8 +42,8 @@ router.get("/", async (req, res) => {
 });
 
 
-router.get("/submit", (req, res) => {
-    res.render("submit.ejs", { editing: false, recipe: {} });
+router.get("/submit", ensureAuthenticated, (req, res) => {
+  res.render("submit.ejs", { editing: false, recipe: {} });
 });
 
 router.post("/submit-recipe", ensureAuthenticated, upload.fields([

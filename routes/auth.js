@@ -300,15 +300,23 @@ router.post("/signup", async (req, res) => {
 
 
         // Check for existing user
-        const checkExisting = {
-            text: "SELECT * FROM users WHERE email = $1",
-            values: [email]
-        }
+        const allUsers = await db.query("SELECT * FROM users");
+        for (const row of allUsers.rows) {
+          try {
+            const decrypted = decryptInfo({
+              firstname: row.first_name,
+              lastname: row.last_name,
+              email: row.email,
+              phone: row.phone
+            }, encryptionKey);
 
-        const result = await db.query(checkExisting);
-        if (result.rows.length !== 0) {
-            throw new Error("Invalid Email Address");
-        }
+            if (decrypted.email.trim().toLowerCase() === email.trim().toLowerCase()) {
+              throw new Error("Invalid Email.");
+            }
+          } catch (err) {
+            console.error("Decryption failed for user row during signup:", err.message);
+          }
+}
 
         // Hash password
         const hashedPassword = await hashPassword(password);
@@ -330,8 +338,15 @@ router.post("/signup", async (req, res) => {
 
         const user = registerUser.rows[0]
 
-        console.log(`User created with slug: ${user.slug}`);
-        console.log("Welcome", user.decrypted.firstname, user.decrypted.lastname)
+        const decrypted = decryptInfo({
+          firstname: user.first_name,
+          lastname: user.last_name,
+          email: user.email,
+          phone: user.phone
+        }, encryptionKey);
+
+        // console.log(`User created with slug: ${user.slug}`);
+        console.log("Welcome", decrypted.firstname, decrypted.lastname)
 
         // TODO: Create a session or token here
         return req.session.regenerate(err => {   // Stop session fixation
@@ -339,8 +354,10 @@ router.post("/signup", async (req, res) => {
 
             req.session.user = {
                 id: user.user_id,
-                email: user.decrypted.email,
+                email: decrypted.email,
                 slug: user.slug,
+                firstname: decrypted.firstname,
+                lastname: decrypted.lastname
             };
 
             // Block stolen sessions used elsewhere

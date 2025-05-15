@@ -63,11 +63,11 @@ router.post("/submit-recipe", ensureAuthenticated, upload.fields([
     const extraImagesNames = (req.files.extra_images || []).map(f => f.filename);
 
     await db.query(`
-      INSERT INTO recipes 
+      INSERT INTO recipes
       (user_id, title, description, ingredients, steps, prep_time, cook_time, servings, tags, main_image, extra_images, video_url, allow_comments, created_at)
       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,NOW())`,
       [
-        req.session.user.id,    // Session ID is user_id
+        req.session.user.id,
         cleanTitle,
         cleanDescription,
         ingredientsArray,
@@ -77,7 +77,7 @@ router.post("/submit-recipe", ensureAuthenticated, upload.fields([
         parseInt(servings),
         tagArray,
         mainImageName,
-        extraImagesNames, // Array of images
+        extraImagesNames,
         cleanVideo,
         allowComments
       ]

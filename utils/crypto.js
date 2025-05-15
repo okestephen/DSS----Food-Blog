@@ -4,6 +4,9 @@ import bcrypt from "bcrypt";
 import crypto from "crypto";
 const PEPPER  = process.env.PEPPER;
 
+
+// -----------------------------------------------------------------------//
+// Copied of https://stackoverflow.com/a/53573115
 const ALGORITHM = {
     BLOCK_CIPHER: "aes-256-gcm",
     // 128 bit auth tag is recommended for GCM
@@ -53,13 +56,15 @@ export function decrypt(ciphertext, key) {
     messagetext = Buffer.concat([messagetext, decipher.final()]);
     return messagetext;
 }
+// ------------------------------------------------------------------------------------------ //
 
-
+// Hash Password + Salt + Pepper
 export async function hashPassword(password) {
     return bcrypt.hash(password + PEPPER, 10);
     
 }
 
+// Compare Password input + pepper with hashed password
 export async function verifyPassword(input, hash) {
     return bcrypt.compare(input + PEPPER, hash);
 }

@@ -18,6 +18,8 @@ const OBSERVATION_WINDOW_MS = 120 * 60 * 1000;  // 10 minutes
 const LOCKOUT_THRESHOLD = 3;
 const MAX_ATTEMPTS = 6;  // Beyond this = permanent lock
 
+
+// Checks if there is an encryption key
 if (!process.env.ENCRYPTION_KEY) {
   throw new Error("Missing ENCRYPTION_KEY in environment variables.");
 }
@@ -150,15 +152,14 @@ router.post("/login", async (req, res) => {
       });
     }
 
-    // Step 1: Check email and password
-    // password = password.trim();
 
+    // Step 1: Check email and password
     if (!email || !password) {
       await delay(500);
       throw new Error("Email and password are required.");
     }
 
-    const allUsers = await db.query("SELECT * FROM users"); // We need to decrypt each one to match email
+    const allUsers = await db.query("SELECT * FROM users"); // Decrypt each record to match email
 
     let matchedUser = null;
     for (const row of allUsers.rows) {
@@ -341,7 +342,7 @@ router.post("/signup", async (req, res) => {
           phone: user.phone
         }, encryptionKey);
 
-        // TODO: Create a session or token here
+       // Create a session
         return req.session.regenerate(err => {   // Stop session fixation
             if (err) throw err;
 
@@ -371,7 +372,8 @@ router.post("/signup", async (req, res) => {
 });
 
 
-router.post("/logout", (req, res) => {   // Proper Session Invalidation
+// Proper Session Invalidation
+router.post("/logout", (req, res) => {   
     req.session.destroy(err => {
         if (err) {
             console.error("Logout error: ", err);
@@ -389,6 +391,8 @@ router.get("/forgot-password", (req, res) => {
 router.post("/forgot-password", async (req, res) => {
     const {email} = req.body;
     try {
+
+        // Search for user
         const allUsers = await db.query("SELECT * FROM users");
         let matchedUser = null;
 
@@ -411,6 +415,7 @@ router.post("/forgot-password", async (req, res) => {
         }
 
         if (!matchedUser){
+          await delay(500)
           return res.render("forgot-password.ejs", {
             error: null,
             message: "If that email address is in our database, we will send you an email to reset your password."
@@ -418,6 +423,8 @@ router.post("/forgot-password", async (req, res) => {
         }
 
         const user = matchedUser;
+
+        // Create token for reset link and Time window
         const token = crypto.randomBytes(32).toString("hex");
         const expiry = new Date(Date.now() + (1000 * 60 * 60)); 
 
@@ -430,6 +437,7 @@ router.post("/forgot-password", async (req, res) => {
         const resetLink = `http://localhost:3000/reset-password/${token}`;
         await sendPasswordResetEmail(user.decrypted.email, user.decrypted.firstname, resetLink);
         
+        await delay(500)
         res.render("forgot-password.ejs", { 
           error: null,
           message: "If that email address is in our database, we will send you an email to reset your password."
@@ -444,8 +452,11 @@ router.post("/forgot-password", async (req, res) => {
     }
 });
 
+
 router.get("/reset-password/:token", async (req, res) => {
     const { token } = req.params;
+
+    // Checks Token validity
     const result = await db.query(
         "SELECT * FROM users WHERE reset_token = $1 AND reset_token_expiry > NOW()",
         [token]
@@ -473,10 +484,12 @@ router.get("/reset-password/:token", async (req, res) => {
   res.render("reset-password.ejs", { token, error: null, firstname });   
 });
 
+
 router.post("/reset-password/:token", async (req, res) => {
     const { token } = req.params;
     const { password, confirmPassword } = req.body;
 
+    // Password Validation
     if (password !== confirmPassword){
         return res.render("reset-password.ejs", {token, error: "Passwords do not match."});
     }
@@ -504,12 +517,14 @@ router.post("/reset-password/:token", async (req, res) => {
 
     const hashedPassword = await hashPassword(password);
 
+
+    // Reset Password and unlock account
     await db.query(
         "UPDATE users SET password = $1, reset_token = NULL, reset_token_expiry = NULL, failed_attempts=0, is_locked = false, last_failed = NULL WHERE reset_token = $2",
         [hashedPassword, token]
     );
 
-    res.redirect("/login?reset=success");
+    res.redirect("/login?reset=success", {message: "Password Reset Succesful."});
 })
 
 

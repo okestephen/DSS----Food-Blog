@@ -1,8 +1,9 @@
+// XSS mitigation and input validation
 export function escapeHTML(str) {
 
   if (typeof str !== "string") {
         if (str === null || str === undefined) return "";
-        str = String(str); // Safely coerce to string (e.g., numbers)
+        str = String(str); // Safely change to string
     }
     
     return str

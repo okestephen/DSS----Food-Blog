@@ -1,3 +1,4 @@
+// Log otp action into the database for admin surveillance
 export async function logOtpAction(db, userId, action, req){
     const ip = req.ip;
     const ua = req.get("User-Agent");

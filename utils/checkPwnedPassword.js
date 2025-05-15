@@ -7,6 +7,7 @@ export async function isPwned(password) {
   const suffix = sha1.slice(5);
 
   try {
+    // Call pwnedpassword API to check if password is pwned
     const response = await axios.get(`https://api.pwnedpasswords.com/range/${prefix}`);
     const lines = response.data.split("\n");
 

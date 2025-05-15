@@ -8,6 +8,8 @@ import { decryptInfo } from "../utils/crypto.js";
 import { escapeHTML } from "../utils/sanitize.js"; // Manual XSS mitigation
 import crypto from "crypto";
 
+
+// Checks if encryption key exists
 if (!process.env.ENCRYPTION_KEY) {
   throw new Error("Missing ENCRYPTION_KEY in environment variables.");
 }
@@ -23,6 +25,8 @@ const upload = multer({ storage });
 
 const router = express.Router();
 
+
+// Default Route
 router.get("/", async (req, res) => {
   try {
     const getRecipes = await db.query(
@@ -42,13 +46,14 @@ router.get("/", async (req, res) => {
   }
 });
 
-
+// Submit route
 router.get("/submit", ensureAuthenticated, (req, res) => {
   const csrfToken = crypto.randomBytes(32).toString("hex");
   req.session.csrfToken = csrfToken;
   res.render("submit.ejs", { csrfToken, editing: false, recipe: {} });
 });
 
+// submit recipe into the database
 router.post("/submit-recipe", ensureAuthenticated, upload.fields([
   { name: "main_image", maxCount: 1 },
   { name: "extra_images", maxCount: 10 }
@@ -64,6 +69,7 @@ router.post("/submit-recipe", ensureAuthenticated, upload.fields([
       return res.status(403).send("Invalid CSRF token.");
     }
 
+    // Input validation
     const { title, description, prep_time, cook_time, servings, ingredients, steps, tags, video, allow_comments } = req.body;
     const ingredientsArray = (Array.isArray(ingredients) ? ingredients : [ingredients]).map(escapeHTML);
     const stepsArray = (Array.isArray(steps) ? steps : [steps]).map(escapeHTML);
@@ -117,6 +123,8 @@ router.post("/submit-recipe", ensureAuthenticated, upload.fields([
   }
 });
 
+
+// Displays recipe
 router.get("/recipe/:id", async (req, res) => {
   try {
     const result = await db.query(
@@ -142,6 +150,8 @@ router.get("/recipe/:id", async (req, res) => {
   }
 });
 
+
+// Edit Recipe if user is authenticated and the owner of said recipe
 router.get("/recipe/:id/edit", ensureAuthenticated, async (req, res) => {
   try {
     const result = await db.query("SELECT * FROM recipes WHERE recipe_id = $1", [req.params.id]);
@@ -179,6 +189,7 @@ router.post("/recipe/:id/edit", ensureAuthenticated, upload.fields([
     const recipe = result.rows[0];
     if (!recipe || recipe.user_id !== req.session.user.id) return res.status(403).send("Not authorized");
 
+    // Input Validation
     const {
       title, description, prep_time, cook_time, servings,
       ingredients, steps, tags, video, allow_comments,
@@ -249,7 +260,7 @@ router.post("/recipe/:id/edit", ensureAuthenticated, upload.fields([
 });
 
 
-
+// Delete recipe if user is authenticated and the owner of said recipe.
 router.post("/recipe/:id/delete", ensureAuthenticated, async (req, res) => {
 
   const submittedToken = req.body.csrfToken;
@@ -279,6 +290,8 @@ router.post("/recipe/:id/delete", ensureAuthenticated, async (req, res) => {
 });
 
 
+
+// Display recipes and allow search of recipes
 router.get("/browse", async (req, res) => {
   try {
     const searchTerm = req.query.q;
@@ -310,6 +323,8 @@ router.get("/browse", async (req, res) => {
   }
 });
 
+
+// Displays the user profile if user is authenticated and the session is valid
 router.get("/profile/:slug", ensureAuthenticated, validateSession, async (req, res) => {
     const {slug} = req.params;
 

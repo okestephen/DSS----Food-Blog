@@ -1,17 +1,20 @@
+// Login input validation
 export const cleanup = (data) => {
     data = data.charAt(0).toUpperCase() + data.slice(1);
     return data.trim()
 };
 
-
+// Checks if password is an appropriate length
 export const isValidPassword = (password) => {
     return password.length >= 8;
 };
 
+// Display password recommendation
 export const passwordRequirementsMessage = () => {
     return "Password must include at least:\n- 1 uppercase letter;\n 1 lowercase letter;\n 1 digit;\n Minimum length of 8 characters.";
 };
 
+// Validate signup input 
 export const validateSignupInput = (fname, lname, email, password, passwordConf, phone) => {
     const emailregex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     const nameregex = /^[a-zA-z-']*$/;

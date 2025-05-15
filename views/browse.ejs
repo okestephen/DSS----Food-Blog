@@ -1,10 +1,8 @@
 <%- include("partials/header.ejs") %>
-
 <form action="/browse" method="GET" class="search">
   <span class="search-icon material-symbols-outlined">search</span>
   <input class="search-input" type="search" name="q" placeholder="Search recipes..." value="<%= searchTerm || '' %>">
 </form>
-
 <div class="results grid">
   <% if (recipes && recipes.length) { %>
     <% recipes.forEach(recipe => { %>
@@ -19,5 +17,6 @@
     <p>No recipes found.</p>
   <% } %>
 </div>
+
 
 <%- include("partials/footer.ejs") %>

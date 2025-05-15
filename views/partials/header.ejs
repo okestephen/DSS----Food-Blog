@@ -17,7 +17,7 @@
 <header>
     <img class="logo" alt="logo" src="/images/Logo-Dark.png">
     <% if (session && session.user) { %>
-       <p id="welcome">Welcome, <%= session.user.slug %>!</p>
+       <p id="welcome">Welcome, <%= session.user.firstname %> <%= session.user.lastname %>!</p>
        <ul class="nav__links">
            <li><a class="active" href="/">Home</a></li>
            <li class="dropdown">
@@ -37,11 +37,7 @@
        <ul class="nav__links">
            <li><a class="active" href="/">Home</a></li>
            <li class="dropdown">
-               <a href="javascript:void(0)" class="dropbtn">Recipes</a>
-               <div class="dropdown-content">
-                   <a href="/browse">Browse Recipes</a>
-                   <a href="/submit">Submit a Recipe</a>
-               </div>
+               <a href="/browse" class="dropbtn">Recipes</a>
            </li>
            <li><a href="/about">About</a></li>
        </ul>
@@ -49,4 +45,3 @@
    <% } %>
 </header>
 
-<main class="container">

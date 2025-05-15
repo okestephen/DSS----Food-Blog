@@ -1,4 +1,4 @@
-const IDLE_TIMEOUT = 1000 * 60 * 1; // 15 minutes
+const IDLE_TIMEOUT = 1000 * 60 * 15; // 15 minutes
 
 export function validateSession(req, res, next) {
     const now = Date.now();

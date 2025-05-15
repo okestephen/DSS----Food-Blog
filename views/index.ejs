@@ -1,44 +1,35 @@
 <%- include("partials/header.ejs") %>
-
+<main class="container">
 <div class="left">
   <img src="\images\linus-mimietz-O3ISKgWmzPo-unsplash.jpg" alt="Photo by Linus Mimietz on Unsplash">
 </div>
-<div class="hero-section">
-  <% if (featuredRecipes.length > 0) { %>
-    <div id="featuredCarousel" class="carousel slide" data-bs-ride="carousel">
-      <div class="carousel-inner">
-        <% featuredRecipes.forEach((recipe, index) => { %>
-          <div class="carousel-item <%= index === 0 ? 'active' : '' %>">
-            <img src="/uploads/<%= recipe.main_image %>" class="d-block w-100" alt="<%= recipe.title %>">
-            <div class="carousel-caption d-none d-md-block">
-              <h5><%= recipe.title %></h5>
-              <p><%= recipe.description %></p>
-              <a class="btn btn-primary" href="/recipe/<%= recipe.recipe_id %>/<%= recipe.slug %>">Cook Now</a>
-            </div>
+<div class="custom-carousel-wrapper">
+  <div id="featuredCarousel" class="carousel slide" data-bs-ride="carousel">
+    <div class="carousel-inner">
+      <% featuredRecipes.forEach((recipe, index) => { %>
+        <div class="carousel-item <%= index === 0 ? 'active' : '' %>">
+          <img src="/uploads/<%= recipe.main_image %>" class="d-block w-100" alt="<%= recipe.title %>">
+          <div class="carousel-caption d-none d-md-block">
+            <h5><%= recipe.title %></h5>
+            <p><%= recipe.description %></p>
+            <a class="btn btn-primary" href="/recipe/<%= recipe.recipe_id %>/<%= recipe.slug %>">Cook Now</a>
           </div>
-        <% }); %>
-      </div>
-      <button class="carousel-control-prev" type="button" data-bs-target="#featuredCarousel" data-bs-slide="prev">
-        <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-        <span class="visually-hidden">Previous</span>
-      </button>
-      <button class="carousel-control-next" type="button" data-bs-target="#featuredCarousel" data-bs-slide="next">
-        <span class="carousel-control-next-icon" aria-hidden="true"></span>
-        <span class="visually-hidden">Next</span>
-      </button>
+        </div>
+      <% }); %>
     </div>
-  <% } else { %>
-    <h2>UG23</h2>
-    <img class="logo" src="/images/Logo-Dark.png" alt="logo">
-    <h4>Welcome to UG23 Food Blog!
-      A blog where you can view, try and share recipes
-    </h4>
-  <% } %>
-
-
+    <button class="carousel-control-prev" type="button" data-bs-target="#featuredCarousel" data-bs-slide="prev">
+      <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+      <span class="visually-hidden">Previous</span>
+    </button>
+    <button class="carousel-control-next" type="button" data-bs-target="#featuredCarousel" data-bs-slide="next">
+      <span class="carousel-control-next-icon" aria-hidden="true"></span>
+      <span class="visually-hidden">Next</span>
+    </button>
+  </div>
 </div>
+
 <div class="right">
   <img src="\images\marisol-benitez-QvkAQTNj4zk-unsplash.jpg" alt="Photo by Marisol Benitez on Unsplash">
 </div>
-
+</main>
 <%- include("partials/footer.ejs") %>

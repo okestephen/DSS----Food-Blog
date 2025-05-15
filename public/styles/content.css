@@ -1,144 +1,426 @@
 /* Home/Index page */
-
-.left img, .right img {
-    width: auto;
-    height: 50vh;
-}
-
 .hero-section {
-    display: flex;
-    flex-direction: column;
-    flex-wrap: wrap;
-    align-content: center;
-    justify-content: space-around;
-    align-items: center;
-    /* background-color: rgb(var(--primary)); */
-    background-image: url("/public/images/tipos-de-paella-1.jpg");
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-xl);
+  text-align: center;
+  background-color: white;
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow);
 }
 
-.hero-section img {
-    margin: 0px auto;
-    padding: 5px;
-    width: 30%;
+.hero-section h2 {
+  font-size: 2.5rem;
+  margin-bottom: var(--spacing-sm);
+  color: rgb(var(--primary));
 }
 
-/* End Home/Index page */
-
-/* Auth Pages */
-.msg{
-    width: 100%;
-    margin: 5px auto;
-    padding: 8px;
-    border: 5px;
-    list-style: none;
+.hero-section h4 {
+  margin-bottom: var(--spacing-lg);
+  color: rgb(var(--text-dark));
+  font-weight: 400;
 }
 
-.error {
-    color: darkred;
-    border: 1px solid darkred;
-    border-radius: 5px;
-    background-color: lightcoral;
+.hero-section img.logo {
+  margin: var(--spacing-md) auto;
+  width: 150px;
+  height: auto;
 }
 
-.warning{
-    color: darkgoldenrod;
-    border: 1px solid darkgoldenrod;
-    border-radius: 5px;
-    background-color: yellow;
+/* Carousel */
+.custom-carousel-wrapper {
+  width: 100%;
+  margin: 0 auto;
+  padding: 1rem 0;
 }
 
-.success {
-    color: darkgreen;
-    border: 1px solid darkgreen;
-    border-radius: 5px;
-    background-color: lightgreen;
+#featuredCarousel {
+  width: 100%;
+  max-height: 500px;
+  margin: 0 auto;
+  border-radius: var(--border-radius);
+  overflow: hidden;
+  box-shadow: var(--shadow);
 }
 
+#featuredCarousel .carousel-inner {
+  height: 500px;
+  border-radius: var(--border-radius);
+  overflow: hidden;
+}
+
+#featuredCarousel .carousel-item {
+  height: 500px;
+  position: relative;
+  transition: transform 0.3s ease;
+}
+
+#featuredCarousel .carousel-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: brightness(0.8);
+  transition: filter 0.3s ease;
+}
+
+#featuredCarousel .carousel-item:hover img {
+  filter: brightness(0.9);
+}
+
+#featuredCarousel .carousel-caption {
+  background-color: rgba(var(--primary), 0.8);
+  border-radius: var(--border-radius);
+  padding: 1.5rem;
+  bottom: 30px;
+  max-width: 80%;
+  margin: 0 auto;
+  left: 0;
+  right: 0;
+  text-align: center;
+  transition: transform 0.3s ease;
+}
+
+/* Make carousel captions visible on mobile too */
+#featuredCarousel .carousel-caption.d-none.d-md-block {
+  display: block !important;
+}
+
+#featuredCarousel .carousel-item:hover .carousel-caption {
+  transform: translateY(-5px);
+}
+
+#featuredCarousel .carousel-caption h5 {
+  color: white;
+  font-weight: bold;
+  margin-bottom: 0.75rem;
+  font-size: 1.5rem;
+}
+
+#featuredCarousel .carousel-caption p {
+  color: rgb(var(--secondary));
+  margin-bottom: 1rem;
+  font-size: 1rem;
+}
+
+#featuredCarousel .carousel-caption .btn {
+  background-color: rgb(var(--secondary));
+  color: rgb(var(--primary));
+  font-weight: bold;
+  border: none;
+  padding: 0.5rem 1.2rem;
+  transition: all 0.3s ease;
+}
+
+#featuredCarousel .carousel-caption .btn:hover {
+  background-color: white;
+  color: rgb(var(--primary));
+  transform: scale(1.05);
+}
+
+/* Override Bootstrap's btn-primary */
+#featuredCarousel .carousel-caption .btn.btn-primary {
+  background-color: rgb(var(--secondary));
+  border-color: rgb(var(--secondary));
+}
+
+#featuredCarousel .carousel-caption .btn.btn-primary:hover {
+  background-color: white;
+  border-color: white;
+}
+
+#featuredCarousel .carousel-control-prev,
+#featuredCarousel .carousel-control-next {
+  width: 50px;
+  height: 50px;
+  background-color: rgba(var(--primary), 0.7);
+  border-radius: 50%;
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: 0.8;
+}
+
+#featuredCarousel .carousel-control-prev {
+  left: 15px;
+}
+
+#featuredCarousel .carousel-control-next {
+  right: 15px;
+}
+
+#featuredCarousel .carousel-indicators button {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background-color: rgb(var(--secondary));
+  margin: 0 5px;
+}
+
+/* Making each carousel item a full clickable area */
+#featuredCarousel .carousel-item {
+  cursor: pointer;
+}
+
+
+/* Auth Forms */
 .auth-content {
-    width: 70%;
-    margin: 5px auto;
-    padding: 20px;
-    background-color: rgb(var(--secondary));
-    border-radius: 5px;
+  width: 100%;
+  max-width: 500px;
+  margin: 0 auto;
+  padding: var(--spacing-xl);
+  background-color: white;
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow);
 }
+
 .auth-content h2 {
-    text-align: center;
+  text-align: center;
+  margin-bottom: var(--spacing-lg);
 }
 
 .auth-items {
-    margin-bottom: 10px;
+  margin-bottom: var(--spacing-lg);
 }
 
-.auth-items label{
-    font-size: bolder;
+.auth-items label {
+  display: block;
+  margin-bottom: var(--spacing-xs);
+  font-weight: 600;
 }
 
 .auth-items input {
-    width: 100%;
-    border-radius: 5px;
-    padding: 10px;
-    border: 1px solid rgb(var(--primary));
+  width: 100%;
+  padding: var(--spacing-md);
+  border: 1px solid rgba(var(--text-dark), 0.2);
+  border-radius: var(--border-radius);
+  transition: var(--transition);
 }
 
 .auth-items input:focus {
-    border: 2px solid rgb(var(--primary));
+  outline: none;
+  border-color: rgb(var(--primary));
+  box-shadow: 0 0 0 2px rgba(var(--primary), 0.2);
 }
 
-.auth-content p {
-    text-align: right;
-    color: black;
+.auth-items p {
+  margin-top: var(--spacing-sm);
+  text-align: right;
 }
 
-.btn {
-    padding: .5rem 1rem;
-    background-color: rgb(var(--primary));
-    color: white;
-    border: 1px solid transparent;
-    border-radius: .25rem;
-    font-size: 1.08rem;
+.auth-items a {
+  color: rgb(var(--primary));
 }
 
-.btn:hover {
-    background-color: rgba(var(--primary), 0.7);
-    color: rgb(var(--secondary));
-    font-weight: bolder;
+/* Messages */
+.msg {
+  width: 100%;
+  margin: var(--spacing-md) 0;
+  padding: var(--spacing-md);
+  border-radius: var(--border-radius);
+  list-style: none;
 }
 
-/* End Auth Pages */
+.error {
+  color: #721c24;
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+}
 
-/* Post Creation - Submit Recipe */
+.warning {
+  color: #856404;
+  background-color: #fff3cd;
+  border: 1px solid #ffeeba;
+}
 
-/* End Post Creation - Submit Recipe */
+.success {
+  color: #155724;
+  background-color: #d4edda;
+  border: 1px solid #c3e6cb;
+}
 
-/* Browser Page */
+/* Recipe Browse */
 .search {
---padding: 14px;
-
-    width: max-content;
-    display: flex;
-    align-items: center;
-    padding: var(--padding);
-    border-radius: 28px;
-    background-color: #f6f6f6;
-    transition: box-shadow 0.25s;
+  display: flex;
+  align-items: center;
+  padding: var(--spacing-md);
+  border-radius: 50px;
+  background-color: white;
+  box-shadow: var(--shadow);
+  margin: var(--spacing-xl) 25% var(--spacing-xl);
+  width: 50%;
 }
 
-.search:focus-within {
-    box-shadow: 0 0 2px rgba(0, 0, 0, 0.75);
+.search-icon {
+  color: rgb(var(--primary));
+  margin-right: var(--spacing-sm);
 }
 
 .search-input {
-    font-size: 16px;
-    font-family: "Montserrat", sans-serif;
-    color: #333333;
-    margin-left: var(--padding);
-    outline: none;
-    border: none;
-    background: transparent;
-    width: 300px;
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 1rem;
+  background: transparent;
 }
 
-.search-input::placeholder,
-.search-icon {
-    color: rgba(0, 0, 0, 0.5);
+.results.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 2fr));
+  gap: var(--spacing-lg);
+}
+
+.card {
+  background-color: white;
+  border-radius: var(--border-radius);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  transition: var(--transition);
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+}
+
+.card img {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+}
+
+.card h3 {
+  padding: var(--spacing-md);
+  text-align: center;
+}
+
+/* Recipe Page */
+article {
+  background-color: white;
+  padding: var(--spacing-xl);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow);
+}
+
+article h1 {
+  font-size: 2rem;
+  margin-bottom: var(--spacing-lg);
+  text-align: center;
+  color: rgb(var(--primary));
+}
+
+article img {
+  width: 100%;
+  max-height: 500px;
+  object-fit: cover;
+  border-radius: var(--border-radius);
+  margin-bottom: var(--spacing-lg);
+}
+
+.extra-images {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+}
+
+.extra-images img {
+  width: 100%;
+  height: 150px;
+  object-fit: cover;
+  border-radius: var(--border-radius);
+}
+
+article h2 {
+  font-size: 1.5rem;
+  margin: var(--spacing-lg) 0 var(--spacing-md);
+  color: rgb(var(--primary));
+}
+
+article ul, article ol {
+  margin-left: var(--spacing-lg);
+  margin-bottom: var(--spacing-lg);
+}
+
+article li {
+  margin-bottom: var(--spacing-sm);
+}
+
+/* Recipe Form */
+#recipeForm {
+  background-color: white;
+  padding: var(--spacing-xl);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow);
+}
+
+.form-section {
+  margin-bottom: var(--spacing-lg);
+}
+
+.form-section label {
+  display: block;
+  margin-bottom: var(--spacing-xs);
+  font-weight: 600;
+}
+
+.form-section input[type="text"],
+.form-section input[type="number"],
+.form-section input[type="url"],
+.form-section textarea,
+.form-section select {
+  width: 100%;
+  padding: var(--spacing-md);
+  border: 1px solid rgba(var(--text-dark), 0.2);
+  border-radius: var(--border-radius);
+  font-size: 1rem;
+}
+
+.form-section input:focus,
+.form-section textarea:focus,
+.form-section select:focus {
+  outline: none;
+  border-color: rgb(var(--primary));
+  box-shadow: 0 0 0 2px rgba(var(--primary), 0.2);
+}
+
+.dynamic-list > div {
+  display: flex;
+  align-items: center;
+  margin-bottom: var(--spacing-sm);
+}
+
+.dynamic-list input {
+  flex: 1;
+  margin-right: var(--spacing-sm);
+}
+
+.dynamic-list button {
+  background-color: #f8d7da;
+  color: #721c24;
+  border: none;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--border-radius);
+  cursor: pointer;
+}
+
+.small-btn {
+  background-color: rgb(var(--secondary));
+  color: rgb(var(--primary));
+  border: none;
+  padding: var(--spacing-xs) var(--spacing-md);
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  margin-top: var(--spacing-xs);
+}
+
+.existing-image {
+  display: flex;
+  align-items: center;
+  margin-bottom: var(--spacing-sm);
+}
+
+.existing-image img {
+  margin-right: var(--spacing-md);
 }

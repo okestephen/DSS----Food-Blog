@@ -1,7 +1,9 @@
 <%- include("partials/header.ejs") %>
+<main class="container">
 <div class="left"></div>
 <div class="auth-content">
     <form class="auth-form" action="/login" method="POST">
+        
         <h2>Login</h2>
 
         <% if (typeof timeout !== "undefined") { %>
@@ -64,4 +66,5 @@
     </form>
 </div>
 <div class="right"></div>
+</main>
 <%- include("partials/footer.ejs") %>

@@ -6,7 +6,7 @@ import bcrypt from "bcrypt";
 import crypto from "crypto";
 import slugify from "slugify";
 import { isPwned } from "../utils/checkPwnedPassword.js";
-import { encryptInfo, decryptInfo, hashPassword, verifyPassword } from "../utils/crypto.js";
+import { encryptInfo, encrypt, decryptInfo, hashPassword, verifyPassword } from "../utils/crypto.js";
 import { logOtpAction } from "../utils/logOtpAction.js";
 import { sendPasswordResetEmail, sendOtpEmail } from "../utils/mailerService.js";
 
@@ -14,7 +14,7 @@ import { sendPasswordResetEmail, sendOtpEmail } from "../utils/mailerService.js"
 const router = express.Router();
 
 
-const OBSERVATION_WINDOW_MS = 10 * 60 * 1000;  // 10 minutes
+const OBSERVATION_WINDOW_MS = 120 * 60 * 1000;  // 10 minutes
 const LOCKOUT_THRESHOLD = 3;
 const MAX_ATTEMPTS = 6;  // Beyond this = permanent lock
 
@@ -145,7 +145,6 @@ router.post("/login", async (req, res) => {
         };
         req.session.ua = req.get("User-Agent");
         req.session.ip = req.ip; 
-        req.lastActivity = Date.now();
         delete req.session.pendingUser;  // Clear pending state
         res.redirect(`/profile/${user.slug}`);
       });
@@ -173,6 +172,7 @@ router.post("/login", async (req, res) => {
 
             if (decrypted.email == email.trim()) {
                 matchedUser = { ...row, decrypted };
+                console.log(matchedUser);
                 break;
             }
         } catch (err) {
@@ -249,7 +249,6 @@ router.post("/login", async (req, res) => {
     );
 
     await logOtpAction(db, user.user_id, "generated", req);
-
 
     await sendOtpEmail(user.decrypted.email, user.decrypted.firstname, otpCode);
 
@@ -346,7 +345,6 @@ router.post("/signup", async (req, res) => {
             // Block stolen sessions used elsewhere
             req.session.ua = req.get("User-Agent");
             req.session.ip = req.ip;
-            req.lastActivity = Date.now();
 
             res.redirect(`/profile/${user.slug}`)
         });

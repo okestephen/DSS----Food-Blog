@@ -9,9 +9,11 @@ import session from "express-session";
 import pgSession from "connect-pg-simple";
 import authRoutes from "./routes/auth.js";
 import pageRoutes from "./routes/pages.js";
-import { validateSession } from "./middleware/sessionIntegrity.js";
 import fs from "fs"; 
 import helmet from "helmet";
+import { validateSession } from "./middleware/sessionIntegrity.js";
+import csrf from "csurf";
+
 // ---------------------------------------------------------
 
 
@@ -20,6 +22,7 @@ const app = express();
 const PORT = 3000;
 const PgSession = pgSession(session);
 
+const csrfProtection = csrf({ cookie: false });
 
 app.set("view engine", "ejs");
 app.use(bodyParser.urlencoded({ extended: true}));
@@ -59,10 +62,27 @@ app.use(
 
 app.use(validateSession);
 
+
+const csrfExemptPaths = ["/login", "/login/", "/signup"];
+
 app.use((req, res, next) => {
   res.locals.session = req.session;
+
+  // Skip CSRF token injection on exempt paths
+  if (csrfExemptPaths.includes(req.path)) {
+    res.locals.csrfToken = ""; // avoids undefined in EJS views
+    return next();
+  }
+
+  try {
+    res.locals.csrfToken = req.csrfToken(); // only attempt if not exempt
+  } catch {
+    res.locals.csrfToken = ""; // fallback for GETs or session-less
+  }
+
   next();
 });
+
 
 
 // Routes
@@ -75,6 +95,13 @@ app.get("/", (req, res) => {
   console.log(req.sessionID);
   res.cookie("hello", "world", {maxAge: 30000, signed: true});
   res.status(201).send({msg: "Hello"});
+});
+
+app.use((err, req, res, next) => {
+  if (err.code === "EBADCSRFTOKEN") {
+    return res.status(403).send("CSRF token invalid or expired.");
+  }
+  next(err);
 });
 
 app.listen(PORT, () => {

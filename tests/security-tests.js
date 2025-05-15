@@ -12,8 +12,7 @@ import { JSDOM } from 'jsdom';
 
 // Import modules to test
 import { ensureAuthenticated } from '../middleware/authMiddleware.js';
-import { validateSessionIntegrity } from '../middleware/sessionIntegrity.js';
-import { idleTimout } from '../middleware/idleTimeout.js';
+import { validateSession } from '../middleware/sessionIntegrity.js';
 import { 
   encrypt, decrypt, hashPassword, verifyPassword, 
   encryptInfo, decryptInfo 
@@ -64,7 +63,7 @@ describe('Security Features Tests', function() {
         req.session.user = { id: 1 };
         req.session.ua = 'Mozilla/5.0';
         req.session.ip = '127.0.0.1';
-        validateSessionIntegrity(req, res, next);
+        validateSession(req, res, next);
         expect(next.calledOnce).to.be.true;
       });
       
@@ -72,7 +71,7 @@ describe('Security Features Tests', function() {
         req.session.user = { id: 1 };
         req.session.ua = 'Different-UA';
         req.session.ip = '127.0.0.1';
-        validateSessionIntegrity(req, res, next);
+        validateSession(req, res, next);
         expect(next.called).to.be.false;
         expect(res.redirect.calledWith('/login')).to.be.true;
       });
@@ -81,7 +80,7 @@ describe('Security Features Tests', function() {
         req.session.user = { id: 1 };
         req.session.ua = 'Mozilla/5.0';
         req.session.ip = '192.168.1.1';
-        validateSessionIntegrity(req, res, next);
+        validateSession(req, res, next);
         expect(next.called).to.be.false;
         expect(res.redirect.calledWith('/login')).to.be.true;
       });
@@ -100,7 +99,7 @@ describe('Security Features Tests', function() {
       
       it('should allow request when last active time is recent', function() {
         req.session.lastActive = Date.now() - (20 * 60 * 1000); // 20 minutes ago
-        idleTimout(req, res, next);
+        validateSession(req, res, next);
         expect(next.calledOnce).to.be.true;
         expect(req.session.lastActive).to.equal(Date.now());
       });
@@ -108,7 +107,7 @@ describe('Security Features Tests', function() {
       it('should redirect to login with timeout flag when session is idle too long', function() {
         req.session.user = { id: 1 };
         req.session.lastActive = Date.now() - (31 * 60 * 1000); // 31 minutes ago
-        idleTimout(req, res, next);
+        validateSession(req, res, next);
         expect(next.called).to.be.false;
         expect(res.redirect.calledWith('/login?timeout=true')).to.be.true;
       });

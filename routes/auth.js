@@ -6,7 +6,7 @@ import bcrypt from "bcrypt";
 import crypto from "crypto";
 import slugify from "slugify";
 import { isPwned } from "../utils/checkPwnedPassword.js";
-import { encryptInfo, encrypt, decryptInfo, hashPassword, verifyPassword } from "../utils/crypto.js";
+import { encryptInfo, decryptInfo, hashPassword, verifyPassword } from "../utils/crypto.js";
 import { logOtpAction } from "../utils/logOtpAction.js";
 import { sendPasswordResetEmail, sendOtpEmail } from "../utils/mailerService.js";
 
@@ -145,6 +145,7 @@ router.post("/login", async (req, res) => {
         };
         req.session.ua = req.get("User-Agent");
         req.session.ip = req.ip; 
+        req.lastActivity = Date.now();
         delete req.session.pendingUser;  // Clear pending state
         res.redirect(`/profile/${user.slug}`);
       });
@@ -172,7 +173,6 @@ router.post("/login", async (req, res) => {
 
             if (decrypted.email == email.trim()) {
                 matchedUser = { ...row, decrypted };
-                console.log(matchedUser);
                 break;
             }
         } catch (err) {
@@ -249,6 +249,7 @@ router.post("/login", async (req, res) => {
     );
 
     await logOtpAction(db, user.user_id, "generated", req);
+
 
     await sendOtpEmail(user.decrypted.email, user.decrypted.firstname, otpCode);
 
@@ -345,6 +346,7 @@ router.post("/signup", async (req, res) => {
             // Block stolen sessions used elsewhere
             req.session.ua = req.get("User-Agent");
             req.session.ip = req.ip;
+            req.lastActivity = Date.now();
 
             res.redirect(`/profile/${user.slug}`)
         });

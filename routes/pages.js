@@ -1,6 +1,6 @@
 import express from "express";
 import { ensureAuthenticated } from "../middleware/authMiddleware.js";
-import { validateSessionIntegrity } from "../middleware/sessionIntegrity.js";
+import { validateSession } from "../middleware/sessionIntegrity.js";
 import { db } from "../db/connect.js";
 import multer from "multer";
 import path from "path";
@@ -245,8 +245,14 @@ router.get("/browse", async (req, res) => {
   }
 });
 
-router.get("/profile/:slug", ensureAuthenticated, validateSessionIntegrity, async (req, res) => {
+router.get("/profile/:slug", ensureAuthenticated, validateSession, async (req, res) => {
     const {slug} = req.params;
+
+    // Block acess if slug isn't for logged-in user
+    if (slug !== req.session.user.slug){
+      return res.redirect("/login");
+    }
+
     const result = await db.query(
         "SELECT * FROM users WHERE slug = $1",
         [slug]
@@ -257,11 +263,6 @@ router.get("/profile/:slug", ensureAuthenticated, validateSessionIntegrity, asyn
     }
 
     const user = result.rows[0];
-
-    // Block acess if slug isn't for logged-in user
-    if (user.user_id !== req.session.user.id){
-        res.status(403).send("Access Denied");
-    }
 
     const decrypted = decryptInfo({
       firstname: user.first_name,

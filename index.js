@@ -9,7 +9,7 @@ import session from "express-session";
 import pgSession from "connect-pg-simple";
 import authRoutes from "./routes/auth.js";
 import pageRoutes from "./routes/pages.js";
-import { idleTimout } from "./middleware/idleTimeout.js";
+import { validateSession } from "./middleware/sessionIntegrity.js";
 import fs from "fs"; 
 import helmet from "helmet";
 // ---------------------------------------------------------
@@ -57,7 +57,7 @@ app.use(
   })
 )
 
-app.use(idleTimout);
+app.use(validateSession);
 
 app.use((req, res, next) => {
   res.locals.session = req.session;

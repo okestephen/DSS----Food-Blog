@@ -187,5 +187,68 @@ function clearTags() {
   }
 }
 </script>
+<script>
+document.getElementById("recipeForm").addEventListener("submit", function (e) {
+  const mainImage = document.getElementById("main_image").files[0];
+  const extraImages = document.getElementById("extra_images").files;
+
+  const isValidFile = (file) => {
+    return file && ['image/jpeg', 'image/png', 'image/gif', 'image/webp'].includes(file.type);
+  };
+
+  if (mainImage && !isValidFile(mainImage)) {
+    alert("Main image must be a JPG, PNG, GIF, or WebP.");
+    e.preventDefault();
+    return;
+  }
+
+  for (let file of extraImages) {
+    if (!isValidFile(file)) {
+      alert("Extra images must be JPG, PNG, GIF, or WebP only.");
+      e.preventDefault();
+      return;
+    }
+  }
+});
+</script>
+<script>
+function setupDropZone(inputElement) {
+  const form = document.getElementById("recipeForm");
+
+  form.addEventListener("dragover", (e) => {
+    e.preventDefault();
+  });
+
+  form.addEventListener("drop", (e) => {
+    e.preventDefault();
+    const files = [...e.dataTransfer.files];
+
+    const isValidImage = (file) =>
+      ['image/jpeg', 'image/png', 'image/gif', 'image/webp'].includes(file.type);
+
+    if (files.some(file => !isValidImage(file))) {
+      alert("Only image files (JPG, PNG, GIF, WebP) can be uploaded.");
+      return;
+    }
+
+    const dt = new DataTransfer();
+    files.forEach(file => {
+      if (isValidImage(file)) dt.items.add(file);
+    });
+
+    // Assign files to the right input
+    if (inputElement.multiple) {
+      inputElement.files = dt.files;
+    } else {
+      const dtSingle = new DataTransfer();
+      if (dt.files[0]) dtSingle.items.add(dt.files[0]);
+      inputElement.files = dtSingle.files;
+    }
+  });
+}
+
+setupDropZone(document.getElementById("main_image"));
+setupDropZone(document.getElementById("extra_images"));
+</script>
 </main>
 <%- include("partials/footer.ejs") %>

@@ -15,13 +15,33 @@ if (!process.env.ENCRYPTION_KEY) {
 }
 const encryptionKey = Buffer.from(process.env.ENCRYPTION_KEY, "hex");
 
+
+const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 // File storage config
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, path.join("public", "uploads")),
-  filename: (req, file, cb) => cb(null, `recipe_${Date.now()}_${file.originalname}`)
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1E9);
+    const ext = path.extname(file.originalname).toLowerCase();
+    cb(null, `recipe_${uniqueSuffix}${ext}`);
+  }
 });
 
-const upload = multer({ storage });
+const fileFilter = (req, file, cb) => {
+  if (allowedMimeTypes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error("Only image files are allowed."), false);
+  }
+};
+
+const upload = multer({
+  storage,
+  fileFilter,
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5 MB max
+  }
+});
 
 const router = express.Router();
 
@@ -54,10 +74,24 @@ router.get("/submit", ensureAuthenticated, (req, res) => {
 });
 
 // submit recipe into the database
-router.post("/submit-recipe", ensureAuthenticated, upload.fields([
-  { name: "main_image", maxCount: 1 },
-  { name: "extra_images", maxCount: 10 }
-]), async (req, res) => {
+router.post("/submit-recipe", ensureAuthenticated, (req, res, next) => {
+  upload.fields([
+    { name: "main_image", maxCount: 1 },
+    { name: "extra_images", maxCount: 10 }
+  ])(req, res, function (err) {
+    if (err instanceof multer.MulterError || err) {
+      console.error("Upload error:", err);
+
+      // Wipe session and force logout
+      req.session.destroy(() => {
+        res.clearCookie("connect.sid");
+        return res.redirect("/login?upload_error=1");
+      });
+    } else {
+      next(); 
+    }
+  });
+}, async (req, res) => {
   try {
 
     // CSRF Validation

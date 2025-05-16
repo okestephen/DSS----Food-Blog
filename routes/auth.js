@@ -498,7 +498,7 @@ router.post("/reset-password/:token", async (req, res) => {
         [token]
     );
     if (userResult.rows.length === 0) {
-        return res.send("Invalid or expired token")
+        return res.render( "reset-password.ejs", {token, error: "Invalid or expired token"});
     }
 
     if (!isValidPassword(password)){
@@ -509,7 +509,7 @@ router.post("/reset-password/:token", async (req, res) => {
     }
 
     if (await isPwned(password)) {
-        return res.render("/reset-password.ejs", {
+        return res.render("reset-password.ejs", {
             token,
             error: "This password has been found in known data breaches. Please choose a different one."
         });
@@ -524,7 +524,7 @@ router.post("/reset-password/:token", async (req, res) => {
         [hashedPassword, token]
     );
 
-    res.redirect("/login?reset=success", {message: "Password Reset Succesful."});
+    res.redirect("/login?reset=success");
 })
 
 

@@ -6,7 +6,7 @@ export function validateSession(req, res, next) {
     const now = Date.now();
 
     if (req.session.user) {
-        // Retrieve session information
+        // Retrieve session information and compare it with cuuret
         const userAgentChanged = req.session.ua !== req.get("User-Agent");
         const ipChanged = req.session.ip !== req.ip;
         const lastActivity = req.session.lastActivity || now;
